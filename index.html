@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Regal Pet Salon — Staff Time Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{--gold:#C8A84B;--red:#C0392B;--font-display:'Playfair Display',serif;--font-body:'Nunito',sans-serif;}
+html,body{min-height:100%;font-family:var(--font-body);}
+body{background:#87CEEB;}
+
+.screen{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;overflow-x:hidden;padding:30px 16px 60px;}
+.screen.active{display:flex;}
+
+/* SKY */
+.sky-morning{background:linear-gradient(180deg,#1a1a2e 0%,#c94b1e 25%,#e8845a 45%,#f5c87a 65%,#87CEEB 100%);}
+.sky-day{background:linear-gradient(180deg,#4aa8e8 0%,#87CEEB 40%,#c8e8ff 100%);}
+.sky-evening{background:linear-gradient(180deg,#1a0a2e 0%,#7b1fa2 20%,#e64a19 45%,#ff8f00 65%,#ffcc02 100%);}
+.sky-night{background:linear-gradient(180deg,#050510 0%,#0d0d2e 50%,#1a0a2e 100%);}
+
+.sun{position:fixed;border-radius:50%;pointer-events:none;z-index:0;transition:all 1s;}
+.sun-morning{width:90px;height:90px;background:radial-gradient(circle,#ffe066,#ff8c42);top:22%;left:50%;transform:translateX(-50%);box-shadow:0 0 60px 20px rgba(255,180,50,0.4);}
+.sun-day{width:64px;height:64px;background:radial-gradient(circle,#fffde7,#FFD600);top:5%;right:8%;box-shadow:0 0 40px 10px rgba(255,214,0,0.3);}
+.sun-evening{width:80px;height:80px;background:radial-gradient(circle,#ffd54f,#e64a19);bottom:28%;left:50%;transform:translateX(-50%);box-shadow:0 0 60px 20px rgba(230,74,25,0.4);}
+
+.star{position:fixed;background:white;border-radius:50%;pointer-events:none;animation:twinkle 3s infinite;}
+@keyframes twinkle{0%,100%{opacity:0}50%{opacity:0.9}}
+
+/* CARD */
+.card{background:rgba(255,255,255,0.94);backdrop-filter:blur(10px);border-radius:24px;padding:28px 22px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,0.18);position:relative;z-index:1;margin:0 auto;}
+
+/* LOGO */
+.logo-wrap{text-align:center;margin-bottom:6px;z-index:1;width:100%;max-width:480px;margin-left:auto;margin-right:auto;}
+
+/* GREETING */
+.greeting-box{background:linear-gradient(135deg,#fff9e6,#fff3cd);border:2px solid var(--gold);border-radius:16px;padding:14px 16px;margin:12px 0;text-align:center;}
+.greeting-text{font-family:var(--font-display);font-size:16px;color:#5D4037;line-height:1.5;}
+
+/* INPUTS */
+.field-label{font-size:12px;font-weight:800;color:#666;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;margin-top:14px;}
+.text-input{width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:12px;font-family:var(--font-body);font-size:16px;outline:none;transition:border-color .2s;background:white;}
+.text-input:focus{border-color:var(--gold);}
+select.text-input{cursor:pointer;}
+
+/* PIN PAD */
+.pin-display{display:flex;justify-content:center;gap:14px;margin:14px 0 10px;}
+.pin-dot{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--gold);background:transparent;transition:all .15s;}
+.pin-dot.filled{background:var(--gold);transform:scale(1.1);}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto;}
+.pin-btn{background:white;border:2px solid #e8e8e8;border-radius:14px;padding:15px 8px;font-family:var(--font-body);font-size:24px;font-weight:700;cursor:pointer;color:#333;transition:all .12s;user-select:none;-webkit-user-select:none;}
+.pin-btn:active,.pin-btn:focus{background:#FFF3CD;border-color:var(--gold);transform:scale(0.93);outline:none;}
+.pin-btn.del{font-size:18px;color:#aaa;}
+
+/* BUTTONS */
+.btn{width:100%;padding:15px;border:none;border-radius:14px;font-family:var(--font-body);font-size:16px;font-weight:800;cursor:pointer;transition:all .15s;margin-top:10px;letter-spacing:0.3px;}
+.btn:active{transform:scale(0.97);}
+.btn-gold{background:linear-gradient(135deg,#b8922a,#e8c050);color:white;box-shadow:0 4px 15px rgba(200,168,75,0.4);}
+.btn-red{background:linear-gradient(135deg,#a93226,#e74c3c);color:white;}
+.btn-green{background:linear-gradient(135deg,#1e8449,#27ae60);color:white;}
+.btn-blue{background:linear-gradient(135deg,#1a6fa8,#2980b9);color:white;}
+.btn-gray{background:#f0f0f0;color:#555;border:1px solid #ddd;}
+.btn-outline{background:transparent;border:2px solid var(--gold);color:#996a00;}
+.btn-sm{padding:9px 14px;font-size:13px;width:auto;border-radius:10px;margin-top:0;}
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+.action-row .btn{margin-top:0;}
+
+/* STATUS */
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:800;white-space:nowrap;}
+.status-in{background:#d4edda;color:#155724;}
+.status-out{background:#f8d7da;color:#721c24;}
+.status-break{background:#fff3cd;color:#856404;}
+
+/* AVATAR */
+.avatar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:10px 0;}
+.avatar-opt{cursor:pointer;border:3px solid transparent;border-radius:12px;padding:5px 3px;text-align:center;transition:all .15s;background:white;}
+.avatar-opt.selected{border-color:var(--gold);background:#fff9e6;}
+.avatar-opt svg{width:46px;height:46px;display:block;margin:0 auto;}
+.avatar-opt .breed-name{font-size:8.5px;font-weight:800;color:#666;margin-top:3px;line-height:1.1;}
+
+/* CLOCK */
+.clock-time{font-family:var(--font-display);font-size:44px;font-weight:700;color:#222;line-height:1;}
+.clock-date{font-size:13px;color:#888;font-weight:700;margin-top:2px;}
+
+/* STATS */
+.shift-stat{background:#f8f9fa;border-radius:12px;padding:11px 14px;margin:7px 0;display:flex;justify-content:space-between;align-items:center;}
+.shift-stat .label{font-size:13px;color:#888;font-weight:700;}
+.shift-stat .value{font-size:17px;font-weight:800;color:#222;}
+
+/* TABS */
+.tab-bar{display:flex;gap:5px;margin-bottom:14px;background:#efefef;border-radius:14px;padding:4px;}
+.tab-btn{flex:1;padding:9px 4px;border:none;background:transparent;border-radius:10px;font-family:var(--font-body);font-size:13px;font-weight:800;cursor:pointer;color:#999;transition:all .2s;}
+.tab-btn.active{background:white;color:#333;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+
+/* TABLE */
+.staff-table{width:100%;border-collapse:collapse;font-size:12px;}
+.staff-table th{background:#f5f5f5;padding:8px 8px;text-align:left;font-weight:800;color:#555;border-bottom:2px solid #e0e0e0;}
+.staff-table td{padding:7px 8px;border-bottom:1px solid #f0f0f0;color:#333;vertical-align:middle;}
+
+/* MISC */
+.section-title{font-family:var(--font-display);font-size:20px;font-weight:700;color:#222;margin-bottom:10px;}
+.error-msg{font-size:13px;text-align:center;margin-top:8px;font-weight:700;min-height:18px;color:var(--red);}
+.success-msg{color:#1e8449;}
+.divider{height:1px;background:#eee;margin:14px 0;}
+.paw-divider{text-align:center;color:var(--gold);font-size:18px;margin:6px 0;letter-spacing:4px;}
+.scroll-area{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.text-sm{font-size:13px;color:#888;}
+.fw700{font-weight:700;}
+.mt8{margin-top:8px;}
+.mb8{margin-bottom:8px;}
+.flex-row{display:flex;gap:10px;align-items:center;}
+.no-data{text-align:center;color:#bbb;font-size:14px;padding:24px 0;}
+.loading{text-align:center;color:#aaa;font-size:14px;padding:16px 0;}
+
+/* SPINNER */
+.spinner{display:inline-block;width:20px;height:20px;border:3px solid rgba(200,168,75,0.3);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* OVERLAY */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+.overlay-card{background:white;border-radius:20px;padding:24px;width:100%;max-width:360px;}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="screen-login" class="screen active sky-morning">
+  <div class="sun sun-morning" id="login-sun"></div>
+
+  <div class="logo-wrap" style="padding-top:24px;">
+    <svg viewBox="0 0 300 260" style="width:200px;height:auto;display:block;margin:0 auto 8px;" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="150" cy="185" rx="100" ry="14" fill="#1a1a1a"/>
+      <rect x="52" y="145" width="196" height="42" rx="6" fill="#1a1a1a"/>
+      <rect x="68" y="155" width="6" height="22" fill="white" opacity="0.3" rx="2"/>
+      <rect x="82" y="155" width="4" height="22" fill="white" opacity="0.2" rx="2"/>
+      <rect x="138" y="155" width="6" height="22" fill="white" opacity="0.3" rx="2"/>
+      <rect x="152" y="155" width="4" height="22" fill="white" opacity="0.2" rx="2"/>
+      <rect x="208" y="155" width="6" height="22" fill="white" opacity="0.3" rx="2"/>
+      <rect x="222" y="155" width="4" height="22" fill="white" opacity="0.2" rx="2"/>
+      <path d="M52 150 L52 80 L90 115 L150 55 L210 115 L248 80 L248 150 Z" fill="#1a1a1a"/>
+      <circle cx="52" cy="78" r="10" fill="white" stroke="#1a1a1a" stroke-width="3"/>
+      <circle cx="150" cy="52" r="12" fill="white" stroke="#1a1a1a" stroke-width="3"/>
+      <circle cx="248" cy="78" r="10" fill="white" stroke="#1a1a1a" stroke-width="3"/>
+      <circle cx="90" cy="113" r="8" fill="white" stroke="#1a1a1a" stroke-width="3"/>
+      <circle cx="210" cy="113" r="8" fill="white" stroke="#1a1a1a" stroke-width="3"/>
+      <circle cx="150" cy="135" r="9" fill="white"/>
+      <circle cx="137" cy="124" r="5" fill="white"/>
+      <circle cx="163" cy="124" r="5" fill="white"/>
+      <circle cx="130" cy="133" r="4" fill="white"/>
+      <circle cx="170" cy="133" r="4" fill="white"/>
+      <text x="150" y="222" font-family="Georgia,serif" font-size="44" font-weight="700" fill="#C0392B" text-anchor="middle" letter-spacing="3">REGAL</text>
+      <text x="150" y="248" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#1a1a1a" text-anchor="middle" letter-spacing="5">PET SALON</text>
+    </svg>
+  </div>
+
+  <div class="card" style="margin-top:10px;">
+    <div class="greeting-box">
+      <div class="greeting-text" id="login-greeting-text">Have a super doggy day! 🐾</div>
+    </div>
+
+    <div class="field-label">Your Name</div>
+    <select class="text-input" id="login-name-select">
+      <option value="">— Select your name —</option>
+    </select>
+    <div style="text-align:right;margin-top:5px;">
+      <span style="font-size:12px;color:#aaa;cursor:pointer;font-weight:700;" onclick="showScreen('screen-register')">New staff? Register here →</span>
+    </div>
+
+    <div class="field-label">Your 4-Digit Code</div>
+    <div class="pin-display" id="login-pin-display"></div>
+    <div class="pin-grid" id="login-pin-grid"></div>
+
+    <div class="error-msg" id="login-error"></div>
+    <button class="btn btn-gold" onclick="doLogin()">Enter Salon 🐾</button>
+  </div>
+</div>
+
+<!-- ===== REGISTER SCREEN ===== -->
+<div id="screen-register" class="screen sky-day">
+  <div class="sun sun-day"></div>
+  <div class="card" style="margin-top:20px;">
+    <div class="section-title">👋 New Staff Member</div>
+    <p class="text-sm">Set up your profile to get started!</p>
+
+    <div class="field-label">Your Full Name</div>
+    <input class="text-input" id="reg-name" placeholder="Enter your name" type="text" autocomplete="off">
+
+    <div class="field-label">Choose Your 4-Digit PIN</div>
+    <div class="pin-display" id="reg-pin-display"></div>
+    <div class="pin-grid" id="reg-pin-grid"></div>
+
+    <div class="field-label">Choose Your Dog Avatar</div>
+    <div class="avatar-grid" id="reg-avatar-grid"></div>
+
+    <div class="error-msg" id="reg-error"></div>
+    <button class="btn btn-gold" onclick="doRegister()">Create My Profile 🐾</button>
+    <button class="btn btn-gray" onclick="showScreen('screen-login')" style="margin-top:8px;">← Back to Login</button>
+  </div>
+</div>
+
+<!-- ===== STAFF DASHBOARD ===== -->
+<div id="screen-staff" class="screen sky-day">
+  <div class="sun sun-day" id="staff-sun"></div>
+  <div class="card" style="margin-top:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+      <div style="flex:1;">
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:#222;" id="staff-welcome">Welcome!</div>
+        <div class="clock-time" id="staff-clock">--:--</div>
+        <div class="clock-date" id="staff-date">---</div>
+      </div>
+      <div style="text-align:center;flex-shrink:0;">
+        <div id="staff-avatar-display" style="width:62px;height:62px;"></div>
+        <div id="staff-status-badge" style="margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <div class="paw-divider">🐾 ✨ 🐾</div>
+
+    <div class="greeting-box">
+      <div class="greeting-text" id="staff-greeting-text"></div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <div class="shift-stat"><span class="label">Today's Hours</span><span class="value" id="stat-today">0h 0m</span></div>
+      <div class="shift-stat"><span class="label">This Week</span><span class="value" id="stat-week">0h 0m</span></div>
+      <div class="shift-stat"><span class="label">Shift Started</span><span class="value" id="stat-start">—</span></div>
+    </div>
+
+    <div id="staff-actions"></div>
+
+    <div class="divider"></div>
+    <div class="section-title" style="font-size:16px;">My Recent Shifts</div>
+    <div id="staff-recent" class="scroll-area" style="max-height:220px;"></div>
+
+    <button class="btn btn-gray" onclick="doLogout()" style="margin-top:14px;font-size:14px;">🚪 Sign Out</button>
+  </div>
+</div>
+
+<!-- ===== MANAGER DASHBOARD ===== -->
+<div id="screen-manager" class="screen sky-day">
+  <div class="sun sun-day"></div>
+  <div class="card" style="margin-top:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div>
+        <div class="section-title" style="margin-bottom:0;">👑 Manager Console</div>
+        <div class="text-sm fw700">Regal Pet Salon</div>
+      </div>
+      <div class="clock-time" id="mgr-clock" style="font-size:26px;"></div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-btn-staff" onclick="mgrTab('staff')">Staff</button>
+      <button class="tab-btn" id="tab-btn-week" onclick="mgrTab('week')">Weekly</button>
+      <button class="tab-btn" id="tab-btn-settings" onclick="mgrTab('settings')">Settings</button>
+    </div>
+
+    <!-- STAFF TAB -->
+    <div id="tab-staff">
+      <div class="section-title" style="font-size:16px;">Today's Status</div>
+      <div id="mgr-staff-list"><div class="loading"><span class="spinner"></span>Loading…</div></div>
+    </div>
+
+    <!-- WEEK TAB -->
+    <div id="tab-week" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <button class="btn btn-sm btn-gray" onclick="changeWeek(-1)">← Prev</button>
+        <span style="font-weight:800;font-size:14px;color:#333;" id="week-label">This Week</span>
+        <button class="btn btn-sm btn-gray" onclick="changeWeek(1)">Next →</button>
+      </div>
+      <div id="week-report-area" class="scroll-area" style="overflow-x:auto;max-height:300px;"></div>
+      <button class="btn btn-green" onclick="exportCSV()" style="margin-top:12px;">⬇ Export CSV for Google Sheets</button>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" style="display:none;">
+      <div class="section-title" style="font-size:16px;">Current Staff</div>
+      <div id="settings-staff-list" class="scroll-area" style="max-height:200px;"></div>
+      <div class="divider"></div>
+      <div class="section-title" style="font-size:16px;">Add New Staff</div>
+      <div class="field-label">Full Name</div>
+      <input class="text-input" id="mgr-new-name" placeholder="Staff member name" autocomplete="off">
+      <div class="field-label">4-Digit PIN</div>
+      <div class="pin-display" id="mgr-pin-display"></div>
+      <div class="pin-grid" id="mgr-pin-grid"></div>
+      <div class="field-label">Avatar</div>
+      <div class="avatar-grid" id="mgr-avatar-grid"></div>
+      <div class="error-msg" id="mgr-error"></div>
+      <button class="btn btn-gold" onclick="mgrAddStaff()">Add Staff Member</button>
+    </div>
+
+    <div class="divider"></div>
+    <button class="btn btn-gray" onclick="doLogout()" style="font-size:14px;">🚪 Sign Out</button>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="overlay" id="loading-overlay" style="display:none;">
+  <div class="overlay-card" style="text-align:center;">
+    <div class="spinner" style="width:36px;height:36px;border-width:4px;"></div>
+    <div style="margin-top:14px;font-weight:700;color:#555;" id="loading-msg">Loading…</div>
+  </div>
+</div>
+
+<script>
+// ===================== CONFIG =====================
+const SUPABASE_URL = 'https://etonoiijjskgucjkpeua.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_V97eLvMIbw_0Xi66eVOGZA_jVNoSzI7';
+const MANAGER_PIN  = '0000';
+
+// ===================== SUPABASE API =====================
+async function sbFetch(path, opts={}) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation',
+      ...opts.headers
+    },
+    ...opts
+  });
+  if (!res.ok) {
+    const e = await res.text();
+    throw new Error(e);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+const db = {
+  async getStaff() { return sbFetch('staff?order=name.asc'); },
+  async addStaff(s) { return sbFetch('staff', {method:'POST', body:JSON.stringify(s)}); },
+  async deleteStaff(id) { return sbFetch('staff?id=eq.'+id, {method:'DELETE', prefer:''}); },
+  async getEntries(filter='') { return sbFetch('time_entries?order=clock_in.desc'+filter); },
+  async addEntry(e) { return sbFetch('time_entries', {method:'POST', body:JSON.stringify(e)}); },
+  async updateEntry(id, data) { return sbFetch('time_entries?id=eq.'+id, {method:'PATCH', body:JSON.stringify(data)}); },
+};
+
+// ===================== STATE =====================
+let currentUser = null;
+let tickInterval = null;
+let staffCache = [];
+let reportWeekOffset = 0;
+const pins = {login:'', reg:'', mgr:''};
+let regSelectedAvatar = 0, mgrSelectedAvatar = 0;
+
+// ===================== GREETINGS (200+) =====================
+const GREETINGS = ["Have a super doggy day! 🐾","You're the top dog today!","Wag more, bark less — and have an amazing shift!","Today is going to be paw-some!","Let the good times roll-over!","You fetch great work from everyone!","Shake a paw and get to work — you've got this!","Sniff out success today!","Every day is a good day when you love what you do!","Fur-real though, you're amazing!","Ready to make tails wag today?","Stay pawsitive — great things are ahead!","You're the best in show!","Sit. Stay. Succeed!","Bark less, wag more — wonderful day ahead!","You're one in a million-aire retriever!","Today's forecast: 100% chance of adorable dogs!","Unleash your greatness today!","Life is short — hug a dog and have a brilliant day!","You're going to absolutely nail it today!","Be the person your dog thinks you are — amazing!","The world is your dog park today!","Ruff day? Nah — today's going to be brilliant!","Hair of the dog — it's going to be a great one!","You're the golden retriever of this team — pure gold!","Chase those dreams like a dog chases a ball!","No bones about it — you're incredible!","Tail-waggingly good morning to you!","You make every pup feel like royalty — just like the salon!","Doggone it, you're wonderful!","Start your engines — or should we say, leashes!","Today's adventure starts here. Let's fetch it!","You're not just any staff member — you're the pack leader!","Keep your chin up like a proud Labrador!","Every grooming session is a masterpiece. You're an artist!","Paw by paw, step by step — you've got this!","This place wouldn't be the same without your spark!","Nose to the grindstone — in the most delightful way!","Good things come to those who wag!","Be fierce, be kind, be fluffy in spirit!","You are pawsitively unstoppable!","Rise and shine — the dogs are waiting!","Make some magic with your scissors today!","The paw must go on — and so does your brilliance!","Every dog deserves your care today!","You were born to do this job. Let's go!","Treat every customer like they're Best in Show!","Another day, another chance to be incredible!","Your smile is worth a thousand tail wags!","A great groomer is worth their weight in kibble — and you're priceless!","Today's going to be a real treat!","Fur and glory — today is yours!","You have the heart of a Great Dane and the energy of a Chihuahua!","Good morning, superstar!","Let your pawsonality shine today!","You bring out the best in every fluffy client!","May your clippers be sharp and your clients adorable!","Nothing can stop a determined groomer on a mission!","Look at you, living your best life with dogs!","Big paws, bigger heart — that's you!","Every paw print tells a story — and you write beautiful ones!","You're the reason dogs leave here looking royal!","Grooming isn't just a job — it's your superpower!","Dogs trust you completely. That says everything!","You're doing ruff-ly amazing things today!","Terrier-fically great morning to you!","Dachshund it — today is going to be wonderful!","Labrador-able morning to you!","Poodle through the day with grace and style!","Shih Tzu me? You're sensational!","Boxer through any challenge that comes your way!","Border Collie your energy — today needs all of it!","Beagle-ieve in yourself today!","You're the Husky of hard work — powerful and beautiful!","Schnauzer up and have a fantastic day!","Maltese-velous morning, dear colleague!","Jack your enthusiasm to maximum Russell!","Springer your spirit forward — fantastic things await!","You make this salon shine like a show dog's coat!","Groom and bloom — today is your day!","The only thing better than a clean dog is a happy groomer!","Put your best paw forward — as you always do!","You're the secret ingredient in this salon's recipe for success!","Rise, shine, and make every dog the best boy or girl!","Have a howling good time today!","Dogs know a good human when they see one — and they see you!","Your patience with every pet is pure gold!","Each trim and wash is a work of art. Keep creating!","Make today so amazing that tomorrow gets jealous!","The dogs are lucky to have someone who cares so deeply!","You radiate warmth — even the nervous pups feel it!","Today's mission: love, lather, repeat!","This salon runs on passion, and yours is infinite!","Excellent things are in store for you today!","The Royal crown of grooming belongs to you today!","You don't just groom dogs — you boost their confidence!","Happy dogs, happy hearts — and you make it happen!","Ready to make some paw-fect memories today?","The best groomer in the room? That's you, without question!","Bring your A-game today — the pups are counting on you!","You are absolutely fetching today!","Your talent is beyond measure — just like a dog's love!","Today is a brand new bowl of kibble — dig in!","Another day to be positively paw-some!","Stars shine because they have no choice — so do you!","May your appointments run smooth and your dogs be calm!","You transform floof into fabulous — it's a gift!","The whole pack is rooting for you today!","You are the heart and soul of this wonderful salon!","Every dog that leaves here is a walking advertisement for your skill!","You deserve all the good things today — and then some!","Be bold, be kind, be brushed to perfection!","The crown suits you — welcome to Regal Pet Salon!","Not all heroes wear capes — some wear grooming aprons!","You're going to sparkle today, just like a freshly groomed Bichon!","Today is full of possibilities — and adorable dogs!","Your dedication to every pup is truly something special!","The morning is bright because you're here!","Let's make today a masterpiece of fur and fun!","Hello, superstar — the salon awaits your magic!","The dogs already love you. Now go love your day!","Your passion for pets makes this place extraordinary!","What a wonderful day to be you!","You've got the golden touch — now go use it!","Another glorious day in the life of pet salon royalty!","The scissors are sharp, the shampoo is ready — let's go!","May every dog you groom today wag twice as hard!","Today's vibe: calm, confident, and completely paw-some!","You're going to make so many tails wag today!","The universe brought dogs and groomers together — and you're proof it worked!","Fluffy, fabulous, fantastic — just like your work!","Today is a 10/10 day — no pun intended (well, maybe a little)!","You were made for mornings like this one!","The pawsibilities are endless today!","A warm hello from all the dogs who adore you!","Shower love on every pup and watch the magic happen!","Today's going to be fur-midably wonderful!","You're proof that some people are just born to care for animals!","Leash yourself to greatness — it's going to be an epic day!","Something wonderful is sniffing its way toward you today!","Your energy lights up the whole salon!","Put on your apron — it's time to make beautiful things happen!","Magnificent morning to a magnificent groomer!","Dogs dream of groomers as kind as you!","Every pet parent trusts their baby with you — that's everything!","You turn nervous nellies into confident, gorgeous dogs!","This is going to be one for the record books — in the best way!","May the blow dryer be with you!","Collar me impressed — you're incredible every single day!","Fetch the day and run with it!","Hair today, gorgeous tomorrow — that's your magic!","You're the definition of dedicated!","The salon shines because you're in it!","Dogs can't say thank you, but their wagging tails speak volumes!","Here's your daily reminder that you are absolutely brilliant!","Trim the day down to its most wonderful essentials!","You inspire every colleague around you without even trying!","A dog's love is unconditional — and so is our appreciation for you!","Make some magic, make some memories, make some gorgeous dogs!","Today's playlist: scissors, shampoo, and smiles!","Four paws up for everything you bring to work!","You are the reason pets leave here looking like royalty!","Keep shining, keep growing, keep grooming!","The best thing about today? You're in it!","Paw-don me for saying so, but you're exceptional!","Your dedication is the backbone of this wonderful salon!","Today is ripe for something amazing — pick it!","Love what you do, and it shows in every dog you groom!","Great morning, great groomer, great day ahead!","All roads lead to a fabulous shift for you today!","The fluffiest, most fabulous day awaits you!","Remember: even on tough days, you're making dogs feel wonderful!","You have a gift that few people possess — embrace it!","Today the dogs will be extra thankful for someone like you!","Happiness is a freshly groomed dog — and you create that!","Ready to be the best part of someone's dog's day?","Today's affirmation: I am paw-some, and I know it!","The world needs more people who love animals like you do!","Good morning — now go show the world your extraordinary talent!","Your care and craft are unmatched in every snip and wash!","Woof woof — that's dog for 'you're amazing, have a great day!'","Today, like every day, you'll leave this place better than you found it!","Tip-top, tail-wagging, top-notch — that's you today!","You're not just grooming dogs — you're building trust, one pup at a time!","May your coffee be strong and your dogs be calm!","Today is a chapter in your amazing story — make it a good one!","You've got style, skill, and the most contagious smile in the salon!","Loyal, loving, and legendary — just like the best dogs and the best staff!","Here we go — another incredible day starts now!","Good morning! The dogs are primped, the salon is ready, and so are you!","Every snip of the scissors is a snip toward something beautiful!","You make this place feel like home — for pets and people alike!","The paw patrol of grooming excellence? That's your squad!","A new day, a new chance to be spectacular — and you always are!","Your love for animals is written all over your face. It's beautiful!","Today's going to be the kind of day that makes the tail wag the dog!","Barking up the right tree? Absolutely — you chose the best career!","Shake it off and have a sensational shift today!","Dogs are colour-blind, but they see kindness perfectly — and they see yours!","You make even Mondays feel like fetch days!","Here comes the best groomer in the building — and that's you!","Today's special ingredient: your extraordinary dedication!","Nose-boops and tail-wags — that's what today has in store for you!","Your paw-sitive attitude is absolutely contagious!","The whole pack agrees — you are one in a million!"];
+
+// ===================== DOG AVATARS =====================
+const DOG_AVATARS = [
+  {name:'Golden',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="22" r="14" fill="#E8A020"/><ellipse cx="23" cy="14" rx="5" ry="7" fill="#E8A020" transform="rotate(-20,23,14)"/><ellipse cx="37" cy="14" rx="5" ry="7" fill="#E8A020" transform="rotate(20,37,14)"/><ellipse cx="23" cy="16" rx="3" ry="5" fill="#C87010" transform="rotate(-20,23,14)"/><ellipse cx="37" cy="16" rx="3" ry="5" fill="#C87010" transform="rotate(20,37,14)"/><circle cx="25" cy="21" r="3" fill="white"/><circle cx="35" cy="21" r="3" fill="white"/><circle cx="26" cy="22" r="2" fill="#222"/><circle cx="36" cy="22" r="2" fill="#222"/><ellipse cx="30" cy="27" rx="5" ry="3" fill="#C87010"/><circle cx="30" cy="27" r="2" fill="#A05010"/><ellipse cx="30" cy="40" rx="16" ry="10" fill="#E8A020"/><ellipse cx="30" cy="38" rx="8" ry="6" fill="#F0B830"/></svg>`},
+  {name:'Poodle',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="22" r="12" fill="#F0E8FF"/><circle cx="20" cy="16" r="8" fill="#F0E8FF"/><circle cx="40" cy="16" r="8" fill="#F0E8FF"/><circle cx="16" cy="22" r="6" fill="#F0E8FF"/><circle cx="44" cy="22" r="6" fill="#F0E8FF"/><circle cx="26" cy="21" r="3" fill="white"/><circle cx="34" cy="21" r="3" fill="white"/><circle cx="27" cy="22" r="2" fill="#333"/><circle cx="35" cy="22" r="2" fill="#333"/><ellipse cx="30" cy="26" rx="4" ry="2.5" fill="#ddd"/><circle cx="30" cy="26" r="1.5" fill="#999"/><ellipse cx="30" cy="40" rx="14" ry="9" fill="#F0E8FF"/><circle cx="22" cy="42" r="5" fill="#F0E8FF"/><circle cx="38" cy="42" r="5" fill="#F0E8FF"/></svg>`},
+  {name:'Bulldog',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="26" r="16" fill="#C8A882"/><ellipse cx="22" cy="18" rx="6" ry="5" fill="#C8A882"/><ellipse cx="38" cy="18" rx="6" ry="5" fill="#C8A882"/><ellipse cx="30" cy="30" rx="10" ry="8" fill="#B89060"/><circle cx="25" cy="23" r="3" fill="white"/><circle cx="35" cy="23" r="3" fill="white"/><circle cx="26" cy="24" r="2" fill="#222"/><circle cx="36" cy="24" r="2" fill="#222"/><ellipse cx="30" cy="31" rx="6" ry="3" fill="#A07850"/><path d="M24 34 Q30 38 36 34" stroke="#888" stroke-width="2" fill="none"/><ellipse cx="30" cy="42" rx="18" ry="8" fill="#C8A882"/></svg>`},
+  {name:'Husky',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="22" r="14" fill="#888"/><ellipse cx="22" cy="13" rx="5" ry="7" fill="#888" transform="rotate(-10,22,13)"/><ellipse cx="38" cy="13" rx="5" ry="7" fill="#888" transform="rotate(10,38,13)"/><ellipse cx="22" cy="15" rx="3" ry="4" fill="#555" transform="rotate(-10,22,13)"/><ellipse cx="38" cy="15" rx="3" ry="4" fill="#555" transform="rotate(10,38,13)"/><ellipse cx="30" cy="26" rx="10" ry="7" fill="white"/><circle cx="25" cy="20" r="3" fill="white"/><circle cx="35" cy="20" r="3" fill="white"/><circle cx="26" cy="21" r="2" fill="#5599EE"/><circle cx="36" cy="21" r="2" fill="#5599EE"/><ellipse cx="30" cy="27" rx="4" ry="2" fill="#ddd"/><circle cx="30" cy="27" r="1.5" fill="#888"/><ellipse cx="30" cy="42" rx="16" ry="9" fill="#888"/></svg>`},
+  {name:'Labrador',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="22" r="14" fill="#8B6914"/><ellipse cx="20" cy="18" rx="5" ry="8" fill="#8B6914"/><ellipse cx="40" cy="18" rx="5" ry="8" fill="#8B6914"/><circle cx="25" cy="21" r="3" fill="white"/><circle cx="35" cy="21" r="3" fill="white"/><circle cx="26" cy="22" r="2.5" fill="#111"/><circle cx="36" cy="22" r="2.5" fill="#111"/><ellipse cx="30" cy="27" rx="5" ry="3" fill="#6B4E14"/><circle cx="30" cy="27" r="2" fill="#4A3010"/><path d="M26 30 Q30 34 34 30" stroke="#555" stroke-width="1.5" fill="none"/><ellipse cx="30" cy="42" rx="16" ry="9" fill="#8B6914"/></svg>`},
+  {name:'Dachshund',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="20" r="11" fill="#8B4513"/><ellipse cx="20" cy="22" rx="4" ry="8" fill="#8B4513"/><ellipse cx="40" cy="22" rx="4" ry="8" fill="#8B4513"/><ellipse cx="30" cy="20" rx="14" ry="6" fill="#6B3010"/><circle cx="26" cy="18" r="2.5" fill="white"/><circle cx="34" cy="18" r="2.5" fill="white"/><circle cx="27" cy="19" r="1.5" fill="#111"/><circle cx="35" cy="19" r="1.5" fill="#111"/><ellipse cx="30" cy="23" rx="4" ry="2" fill="#5A2808"/><ellipse cx="30" cy="42" rx="20" ry="7" fill="#8B4513"/></svg>`},
+  {name:'Beagle',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="22" r="13" fill="#D4A060"/><ellipse cx="18" cy="24" rx="5" ry="9" fill="#8B4513"/><ellipse cx="42" cy="24" rx="5" ry="9" fill="#8B4513"/><ellipse cx="30" cy="18" rx="12" ry="5" fill="#8B4513"/><circle cx="25" cy="21" r="3" fill="white"/><circle cx="35" cy="21" r="3" fill="white"/><circle cx="26" cy="22" r="2" fill="#111"/><circle cx="36" cy="22" r="2" fill="#111"/><ellipse cx="30" cy="27" rx="5" ry="3" fill="#B07840"/><circle cx="30" cy="27" r="2" fill="#805830"/><ellipse cx="30" cy="42" rx="15" ry="9" fill="#D4A060"/></svg>`},
+  {name:'Pug',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="24" r="15" fill="#C8A060"/><ellipse cx="22" cy="16" rx="5" ry="5" fill="#A07840"/><ellipse cx="38" cy="16" rx="5" ry="5" fill="#A07840"/><ellipse cx="30" cy="28" rx="11" ry="9" fill="#B09050"/><circle cx="24" cy="22" r="4" fill="white"/><circle cx="36" cy="22" r="4" fill="white"/><circle cx="25" cy="23" r="2.5" fill="#111"/><circle cx="37" cy="23" r="2.5" fill="#111"/><circle cx="28" cy="29" r="3" fill="#906830"/><circle cx="32" cy="29" r="3" fill="#906830"/><path d="M24 33 Q30 37 36 33" stroke="#777" stroke-width="2" fill="none"/><ellipse cx="30" cy="44" rx="16" ry="7" fill="#C8A060"/></svg>`},
+  {name:'Shih Tzu',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="24" r="16" fill="#F0E0C0"/><ellipse cx="20" cy="18" rx="6" ry="8" fill="#E8D0A0"/><ellipse cx="40" cy="18" rx="6" ry="8" fill="#E8D0A0"/><ellipse cx="30" cy="26" rx="12" ry="10" fill="#E8D0B0"/><circle cx="24" cy="21" r="4" fill="white"/><circle cx="36" cy="21" r="4" fill="white"/><circle cx="25" cy="22" r="2.5" fill="#222"/><circle cx="37" cy="22" r="2.5" fill="#222"/><ellipse cx="30" cy="29" rx="5" ry="3" fill="#C0A070"/><circle cx="30" cy="29" r="2" fill="#906030"/><path d="M14 28 Q30 44 46 28" stroke="#E8D0A0" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="30" cy="46" rx="18" ry="6" fill="#F0E0C0"/></svg>`},
+  {name:'Border Collie',svg:`<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="22" r="14" fill="#222"/><ellipse cx="22" cy="13" rx="5" ry="7" fill="#222" transform="rotate(-10,22,13)"/><ellipse cx="38" cy="13" rx="5" ry="7" fill="#222" transform="rotate(10,38,13)"/><ellipse cx="30" cy="26" rx="11" ry="7" fill="white"/><circle cx="25" cy="20" r="3.5" fill="white"/><circle cx="35" cy="20" r="3.5" fill="white"/><circle cx="26" cy="21" r="2" fill="#4466BB"/><circle cx="36" cy="21" r="2" fill="#4466BB"/><ellipse cx="30" cy="27" rx="4" ry="2" fill="#ddd"/><circle cx="30" cy="27" r="1.5" fill="#888"/><ellipse cx="30" cy="42" rx="16" ry="9" fill="#222"/><ellipse cx="30" cy="44" rx="10" ry="5" fill="white"/></svg>`}
+];
+
+// ===================== UTILS =====================
+function fmtTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+function fmtDuration(ms) {
+  if (!ms || ms <= 0) return '0h 0m';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h + 'h ' + m + 'm';
+}
+function nowMs() { return Date.now(); }
+function isSameDay(a, b) {
+  const da = new Date(a), db = new Date(b);
+  return da.getFullYear()===db.getFullYear() && da.getMonth()===db.getMonth() && da.getDate()===db.getDate();
+}
+function getMondayOfWeek(offset=0) {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day===0 ? -6 : 1 - day;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + diff + (offset * 7));
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+function getWeekRange(offset=0) {
+  const mon = getMondayOfWeek(offset);
+  const fri = new Date(mon);
+  fri.setDate(mon.getDate() + 4);
+  fri.setHours(23,59,59,999);
+  return {start: mon, end: fri};
+}
+function fmtDate(d) {
+  return d.toLocaleDateString('en-NZ', {day:'numeric', month:'short', year:'numeric'});
+}
+function randomGreeting() {
+  return GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+}
+function showLoading(msg='Loading…') {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading-overlay').style.display = 'flex';
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+
+// ===================== SKY THEME =====================
+function getSkyClass() {
+  const h = new Date().getHours();
+  if (h < 6 || h >= 20) return 'sky-night';
+  if (h < 9) return 'sky-morning';
+  if (h < 17) return 'sky-day';
+  return 'sky-evening';
+}
+function applySky(screenId) {
+  const el = document.getElementById(screenId);
+  if (!el) return;
+  el.className = 'screen active ' + getSkyClass();
+  // Update sun classes
+  el.querySelectorAll('.sun').forEach(s => {
+    s.className = 'sun';
+    const h = new Date().getHours();
+    if (h >= 6 && h < 9) s.classList.add('sun-morning');
+    else if (h >= 9 && h < 17) s.classList.add('sun-day');
+    else if (h >= 17 && h < 20) s.classList.add('sun-evening');
+    else s.style.display = 'none';
+  });
+  // Stars at night
+  if (getSkyClass() === 'sky-night') {
+    document.querySelectorAll('.star').forEach(s => s.remove());
+    for (let i = 0; i < 25; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 3 + 1;
+      s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*45}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;z-index:0;`;
+      el.appendChild(s);
+    }
+  }
+}
+
+// ===================== SCREEN NAV =====================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'flex';
+  el.classList.add('active');
+  applySky(id);
+}
+
+// ===================== PIN PADS =====================
+function buildPad(type) {
+  const map = {
+    login: ['login-pin-display','login-pin-grid'],
+    reg:   ['reg-pin-display','reg-pin-grid'],
+    mgr:   ['mgr-pin-display','mgr-pin-grid']
+  };
+  pins[type] = '';
+  const [dId, gId] = map[type];
+  const disp = document.getElementById(dId);
+  const grid = document.getElementById(gId);
+  if (!disp || !grid) return;
+  disp.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const d = document.createElement('div');
+    d.className = 'pin-dot';
+    d.id = dId + i;
+    disp.appendChild(d);
+  }
+  grid.innerHTML = '';
+  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'pin-btn' + (k==='⌫' ? ' del' : '');
+    b.textContent = k;
+    if (k === '') { b.style.visibility = 'hidden'; }
+    b.addEventListener('click', () => {
+      if (k === '⌫') {
+        if (pins[type].length > 0) { pins[type] = pins[type].slice(0,-1); updateDots(dId, pins[type]); }
+      } else if (k && pins[type].length < 4) {
+        pins[type] += k;
+        updateDots(dId, pins[type]);
+      }
+    });
+    grid.appendChild(b);
+  });
+}
+function updateDots(dId, val) {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById(dId + i);
+    if (d) d.className = 'pin-dot' + (i < val.length ? ' filled' : '');
+  }
+}
+
+// ===================== AVATAR GRIDS =====================
+function buildAvatarGrid(containerId, selectedIdx, onSelect) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  DOG_AVATARS.forEach((a, i) => {
+    const d = document.createElement('div');
+    d.className = 'avatar-opt' + (i === selectedIdx ? ' selected' : '');
+    d.innerHTML = a.svg + '<div class="breed-name">' + a.name + '</div>';
+    d.addEventListener('click', () => {
+      el.querySelectorAll('.avatar-opt').forEach(x => x.classList.remove('selected'));
+      d.classList.add('selected');
+      onSelect(i);
+    });
+    el.appendChild(d);
+  });
+}
+
+// ===================== CLOCK TICK =====================
+function startClock(clockId, dateId) {
+  if (tickInterval) clearInterval(tickInterval);
+  const tick = () => {
+    const now = new Date();
+    const el = document.getElementById(clockId);
+    if (el) el.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    if (dateId) {
+      const del = document.getElementById(dateId);
+      if (del) del.textContent = now.toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    }
+    if (currentUser && !currentUser.isManager) updateStaffStats();
+  };
+  tick();
+  tickInterval = setInterval(tick, 15000);
+}
+
+// ===================== LOGIN =====================
+async function initLogin() {
+  document.getElementById('login-greeting-text').textContent = randomGreeting();
+  buildPad('login');
+  showLoading('Loading staff list…');
+  try {
+    staffCache = await db.getStaff();
+  } catch(e) {
+    staffCache = [];
+  }
+  hideLoading();
+  const sel = document.getElementById('login-name-select');
+  sel.innerHTML = '<option value="">— Select your name —</option><option value="__manager__">Manager</option>';
+  staffCache.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = s.name;
+    sel.appendChild(o);
+  });
+}
+async function doLogin() {
+  const sel = document.getElementById('login-name-select');
+  const name = sel.value;
+  const pin = pins.login;
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  if (!name) { err.textContent = 'Please select your name.'; return; }
+  if (pin.length < 4) { err.textContent = 'Please enter your 4-digit code.'; return; }
+  if (name === '__manager__') {
+    if (pin === MANAGER_PIN) {
+      currentUser = {id:'manager', name:'Manager', isManager:true};
+      await showManagerDash();
+    } else {
+      err.textContent = 'Incorrect code. Try again.';
+      pins.login = ''; buildPad('login');
+    }
+    return;
+  }
+  const user = staffCache.find(s => s.id === name);
+  if (!user) { err.textContent = 'Staff member not found.'; return; }
+  if (user.pin !== pin) {
+    err.textContent = 'Incorrect code. Try again.';
+    pins.login = ''; buildPad('login');
+    return;
+  }
+  currentUser = user;
+  await showStaffDash();
+}
+
+// ===================== REGISTER =====================
+function initRegister() {
+  buildPad('reg');
+  buildAvatarGrid('reg-avatar-grid', 0, i => regSelectedAvatar = i);
+  regSelectedAvatar = 0;
+}
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const pin = pins.reg;
+  const err = document.getElementById('reg-error');
+  err.className = 'error-msg';
+  err.textContent = '';
+  if (!name) { err.textContent = 'Please enter your name.'; return; }
+  if (pin.length < 4) { err.textContent = 'Please enter a 4-digit PIN.'; return; }
+  if (pin === MANAGER_PIN) { err.textContent = 'This PIN is reserved. Choose another.'; return; }
+  showLoading('Creating profile…');
+  try {
+    const existing = await db.getStaff();
+    if (existing.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+      hideLoading(); err.textContent = 'A staff member with this name already exists.'; return;
+    }
+    if (existing.find(s => s.pin === pin)) {
+      hideLoading(); err.textContent = 'This PIN is already taken. Choose a different one.'; return;
+    }
+    const newStaff = {id:'s'+Date.now(), name, pin, avatar:regSelectedAvatar, created_at:nowMs()};
+    await db.addStaff(newStaff);
+    staffCache = await db.getStaff();
+    currentUser = newStaff;
+    hideLoading();
+    await showStaffDash();
+  } catch(e) {
+    hideLoading();
+    err.textContent = 'Error saving profile. Please try again.';
+  }
+}
+
+// ===================== STAFF DASHBOARD =====================
+async function showStaffDash() {
+  showScreen('screen-staff');
+  const user = currentUser;
+  document.getElementById('staff-welcome').textContent = 'Hi, ' + user.name + '! 🌟';
+  document.getElementById('staff-avatar-display').innerHTML = DOG_AVATARS[user.avatar || 0].svg;
+  document.getElementById('staff-greeting-text').textContent = randomGreeting();
+  startClock('staff-clock', 'staff-date');
+  await refreshStaffActions();
+  await renderRecentShifts();
+}
+async function refreshStaffActions() {
+  const badge = document.getElementById('staff-status-badge');
+  const actions = document.getElementById('staff-actions');
+  try {
+    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
+    const today = entries.filter(e => isSameDay(e.clock_in, nowMs()));
+    const last = today.length > 0 ? today[0] : null;
+    const isClockedIn = last && !last.clock_out;
+    const onBreak = last && last.personal_break && !last.break_end;
+    if (isClockedIn && !onBreak) {
+      badge.innerHTML = '<span class="status-badge status-in">● Clocked In</span>';
+      actions.innerHTML = `<div class="action-row">
+        <button class="btn btn-red" onclick="doClockOut(false)">🏠 Clock Out</button>
+        <button class="btn btn-outline" onclick="doClockOut(true)">☕ Personal Break</button>
+      </div>`;
+    } else if (onBreak) {
+      badge.innerHTML = '<span class="status-badge status-break">⏸ On Break</span>';
+      actions.innerHTML = `<button class="btn btn-green" onclick="doClockBackIn()">▶ Clock Back In</button>`;
+    } else {
+      badge.innerHTML = '<span class="status-badge status-out">○ Not Clocked In</span>';
+      actions.innerHTML = `<button class="btn btn-gold" onclick="doClockIn()">🐾 Clock In</button>`;
+    }
+  } catch(e) {
+    actions.innerHTML = '<div class="error-msg">Could not load status.</div>';
+  }
+}
+async function updateStaffStats() {
+  try {
+    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
+    const now = nowMs();
+    const today = entries.filter(e => isSameDay(e.clock_in, now));
+    let todayMs = 0;
+    today.forEach(e => {
+      const end = e.clock_out || now;
+      todayMs += end - e.clock_in;
+      if (e.personal_break && e.break_start) todayMs -= ((e.break_end || now) - e.break_start);
+    });
+    document.getElementById('stat-today').textContent = fmtDuration(todayMs);
+    const {start, end} = getWeekRange(0);
+    const week = entries.filter(e => e.clock_in >= start.getTime() && e.clock_in <= end.getTime());
+    let weekMs = 0;
+    week.forEach(e => {
+      const wend = e.clock_out || now;
+      weekMs += wend - e.clock_in;
+      if (e.personal_break && e.break_start) weekMs -= ((e.break_end || now) - e.break_start);
+    });
+    document.getElementById('stat-week').textContent = fmtDuration(weekMs);
+    const first = today.sort((a,b) => a.clock_in - b.clock_in)[0];
+    document.getElementById('stat-start').textContent = first ? fmtTime(first.clock_in) : '—';
+  } catch(e) {}
+}
+async function doClockIn() {
+  showLoading('Clocking in…');
+  try {
+    await db.addEntry({id:'e'+Date.now(), staff_id:currentUser.id, staff_name:currentUser.name, clock_in:nowMs(), clock_out:null, personal_break:false, break_start:null, break_end:null});
+    hideLoading();
+    await refreshStaffActions();
+    await updateStaffStats();
+    await renderRecentShifts();
+  } catch(e) { hideLoading(); alert('Error clocking in. Please try again.'); }
+}
+async function doClockOut(isBreak) {
+  showLoading(isBreak ? 'Starting break…' : 'Clocking out…');
+  try {
+    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
+    const today = entries.filter(e => isSameDay(e.clock_in, nowMs()) && !e.clock_out);
+    const last = today.length > 0 ? today[0] : null;
+    if (!last) { hideLoading(); return; }
+    if (isBreak) {
+      await db.updateEntry(last.id, {personal_break:true, break_start:nowMs()});
+    } else {
+      await db.updateEntry(last.id, {clock_out:nowMs()});
+    }
+    hideLoading();
+    await refreshStaffActions();
+    await updateStaffStats();
+    await renderRecentShifts();
+  } catch(e) { hideLoading(); alert('Error. Please try again.'); }
+}
+async function doClockBackIn() {
+  showLoading('Clocking back in…');
+  try {
+    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
+    const today = entries.filter(e => isSameDay(e.clock_in, nowMs()) && !e.clock_out);
+    const last = today.length > 0 ? today[0] : null;
+    if (!last) { hideLoading(); return; }
+    const now = nowMs();
+    await db.updateEntry(last.id, {break_end:now, clock_out:now});
+    await db.addEntry({id:'e'+Date.now(), staff_id:currentUser.id, staff_name:currentUser.name, clock_in:now, clock_out:null, personal_break:false, break_start:null, break_end:null});
+    hideLoading();
+    await refreshStaffActions();
+    await updateStaffStats();
+    await renderRecentShifts();
+  } catch(e) { hideLoading(); alert('Error. Please try again.'); }
+}
+async function renderRecentShifts() {
+  const el = document.getElementById('staff-recent');
+  try {
+    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id + '&clock_out=not.is.null&limit=8');
+    if (!entries.length) { el.innerHTML = '<div class="no-data">No completed shifts yet.</div>'; return; }
+    el.innerHTML = entries.map(e => {
+      const ms = (e.clock_out - e.clock_in) - (e.personal_break && e.break_start ? (e.break_end || e.clock_out) - e.break_start : 0);
+      const d = new Date(e.clock_in).toLocaleDateString('en-NZ', {weekday:'short', day:'numeric', month:'short'});
+      return `<div class="shift-stat"><span class="label">${d}</span><span class="value" style="font-size:13px;">${fmtTime(e.clock_in)}–${fmtTime(e.clock_out)} <span style="color:#aaa;font-size:12px;">(${fmtDuration(ms)})</span></span></div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="no-data">Could not load shifts.</div>'; }
+}
+
+// ===================== MANAGER DASHBOARD =====================
+async function showManagerDash() {
+  showScreen('screen-manager');
+  startClock('mgr-clock', null);
+  mgrTab('staff');
+}
+function mgrTab(tab) {
+  ['staff','week','settings'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    const btn = document.getElementById('tab-btn-' + t);
+    if (btn) btn.className = 'tab-btn' + (t === tab ? ' active' : '');
+  });
+  if (tab === 'staff') renderMgrStaff();
+  if (tab === 'week') { reportWeekOffset = 0; renderWeekReport(0); }
+  if (tab === 'settings') { renderSettingsStaff(); buildPad('mgr'); buildAvatarGrid('mgr-avatar-grid', 0, i => mgrSelectedAvatar = i); }
+}
+async function renderMgrStaff() {
+  const el = document.getElementById('mgr-staff-list');
+  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading…</div>';
+  try {
+    const staff = await db.getStaff();
+    const entries = await db.getEntries('');
+    const now = nowMs();
+    if (!staff.length) { el.innerHTML = '<div class="no-data">No staff registered yet.</div>'; return; }
+    el.innerHTML = staff.map(s => {
+      const today = entries.filter(e => e.staff_id === s.id && isSameDay(e.clock_in, now));
+      const last = today.sort((a,b) => b.clock_in - a.clock_in)[0];
+      const isClockedIn = last && !last.clock_out;
+      const onBreak = last && last.personal_break && !last.break_end;
+      let statusHtml = '<span class="status-badge status-out">Not In</span>';
+      if (onBreak) statusHtml = '<span class="status-badge status-break">On Break</span>';
+      else if (isClockedIn) statusHtml = '<span class="status-badge status-in">Clocked In</span>';
+      let todayMs = 0;
+      today.forEach(e => { if(e.clock_out){todayMs += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) todayMs -= (e.break_end||e.clock_out) - e.break_start;} });
+      return `<div class="shift-stat">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:34px;height:34px;flex-shrink:0;">${DOG_AVATARS[s.avatar||0].svg}</div>
+          <div><div class="fw700" style="font-size:14px;">${s.name}</div><div class="text-sm">${todayMs>0?fmtDuration(todayMs)+' today':'Not clocked in'}</div></div>
+        </div>${statusHtml}</div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="error-msg">Could not load staff.</div>'; }
+}
+async function renderWeekReport(offset) {
+  reportWeekOffset = offset;
+  const {start, end} = getWeekRange(offset);
+  document.getElementById('week-label').textContent = fmtDate(start) + ' – ' + fmtDate(end);
+  const area = document.getElementById('week-report-area');
+  area.innerHTML = '<div class="loading"><span class="spinner"></span>Loading…</div>';
+  try {
+    const staff = await db.getStaff();
+    const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
+    if (!staff.length) { area.innerHTML = '<div class="no-data">No staff to show.</div>'; return; }
+    const days = ['Mon','Tue','Wed','Thu','Fri'];
+    let html = '<table class="staff-table" style="min-width:320px;"><thead><tr><th>Name</th>' + days.map(d=>'<th>'+d+'</th>').join('') + '<th>Total</th></tr></thead><tbody>';
+    staff.forEach(s => {
+      html += '<tr><td style="font-weight:800;white-space:nowrap;">' + s.name + '</td>';
+      let totalMs = 0;
+      for (let i = 0; i < 5; i++) {
+        const day = new Date(start); day.setDate(start.getDate() + i);
+        const dayEnd = new Date(day); dayEnd.setHours(23,59,59,999);
+        const dayEntries = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
+        let ms = 0;
+        dayEntries.forEach(e => { if(e.clock_out){ ms += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) ms -= (e.break_end||e.clock_out) - e.break_start; } });
+        totalMs += ms;
+        html += '<td style="font-size:11px;white-space:nowrap;">' + (ms>0 ? fmtDuration(ms) : '—') + '</td>';
+      }
+      html += '<td style="font-weight:800;white-space:nowrap;">' + (totalMs>0 ? fmtDuration(totalMs) : '—') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    area.innerHTML = html;
+  } catch(e) { area.innerHTML = '<div class="error-msg">Could not load data.</div>'; }
+}
+function changeWeek(dir) { renderWeekReport(reportWeekOffset + dir); }
+async function exportCSV() {
+  showLoading('Preparing export…');
+  const {start, end} = getWeekRange(reportWeekOffset);
+  try {
+    const staff = await db.getStaff();
+    const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
+    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    let csv = 'Staff Name,' + days.join(',') + ',Weekly Total\n';
+    staff.forEach(s => {
+      let row = s.name;
+      let totalMs = 0;
+      for (let i = 0; i < 5; i++) {
+        const day = new Date(start); day.setDate(start.getDate() + i);
+        const dayEnd = new Date(day); dayEnd.setHours(23,59,59,999);
+        const dayE = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
+        let ms = 0;
+        dayE.forEach(e => { if(e.clock_out){ ms += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) ms -= (e.break_end||e.clock_out) - e.break_start; } });
+        totalMs += ms;
+        const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+        row += ',' + (ms>0 ? h+':'+m.toString().padStart(2,'0') : '0:00');
+      }
+      const th = Math.floor(totalMs/3600000), tm = Math.floor((totalMs%3600000)/60000);
+      row += ',' + (totalMs>0 ? th+':'+tm.toString().padStart(2,'0') : '0:00');
+      csv += row + '\n';
+    });
+    csv += '\nDetailed Time Log (' + fmtDate(start) + ' to ' + fmtDate(end) + ')\n';
+    csv += 'Staff Name,Date,Clock In,Clock Out,Personal Break,Hours Worked\n';
+    const allE = entries.filter(e => e.clock_out).sort((a,b) => a.clock_in - b.clock_in);
+    allE.forEach(e => {
+      const ms = (e.clock_out - e.clock_in) - (e.personal_break&&e.break_start ? (e.break_end||e.clock_out) - e.break_start : 0);
+      const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+      const d = new Date(e.clock_in).toLocaleDateString('en-NZ');
+      csv += `${e.staff_name},${d},${fmtTime(e.clock_in)},${fmtTime(e.clock_out)},${e.personal_break?'Yes':'No'},${h}:${m.toString().padStart(2,'0')}\n`;
+    });
+    hideLoading();
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'regal-pet-salon-' + start.toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { hideLoading(); alert('Export failed. Please try again.'); }
+}
+async function renderSettingsStaff() {
+  const el = document.getElementById('settings-staff-list');
+  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading…</div>';
+  try {
+    const staff = await db.getStaff();
+    if (!staff.length) { el.innerHTML = '<div class="no-data">No staff registered.</div>'; return; }
+    el.innerHTML = staff.map(s => `
+      <div class="shift-stat">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:32px;height:32px;flex-shrink:0;">${DOG_AVATARS[s.avatar||0].svg}</div>
+          <span class="fw700">${s.name}</span>
+        </div>
+        <button class="btn btn-sm btn-gray" style="color:var(--red);border-color:var(--red);" onclick="removeStaff('${s.id}')">Remove</button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div class="error-msg">Could not load staff.</div>'; }
+}
+async function removeStaff(id) {
+  if (!confirm('Remove this staff member? Their time records will be kept.')) return;
+  showLoading('Removing…');
+  try {
+    await db.deleteStaff(id);
+    staffCache = await db.getStaff();
+    hideLoading();
+    renderSettingsStaff();
+    renderMgrStaff();
+    initLogin();
+  } catch(e) { hideLoading(); alert('Error removing staff.'); }
+}
+async function mgrAddStaff() {
+  const name = document.getElementById('mgr-new-name').value.trim();
+  const pin = pins.mgr;
+  const err = document.getElementById('mgr-error');
+  err.className = 'error-msg';
+  err.textContent = '';
+  if (!name) { err.textContent = 'Enter a name.'; return; }
+  if (pin.length < 4) { err.textContent = 'Enter a 4-digit PIN.'; return; }
+  if (pin === MANAGER_PIN) { err.textContent = 'PIN reserved. Choose another.'; return; }
+  showLoading('Adding staff member…');
+  try {
+    const staff = await db.getStaff();
+    if (staff.find(s => s.name.toLowerCase() === name.toLowerCase())) { hideLoading(); err.textContent = 'Name already exists.'; return; }
+    if (staff.find(s => s.pin === pin)) { hideLoading(); err.textContent = 'PIN already taken.'; return; }
+    await db.addStaff({id:'s'+Date.now(), name, pin, avatar:mgrSelectedAvatar, created_at:nowMs()});
+    staffCache = await db.getStaff();
+    hideLoading();
+    document.getElementById('mgr-new-name').value = '';
+    pins.mgr = ''; buildPad('mgr');
+    buildAvatarGrid('mgr-avatar-grid', 0, i => mgrSelectedAvatar = i);
+    renderSettingsStaff();
+    renderMgrStaff();
+    initLogin();
+    err.className = 'error-msg success-msg';
+    err.textContent = '✓ Staff member added!';
+    setTimeout(() => { err.textContent = ''; err.className = 'error-msg'; }, 3000);
+  } catch(e) { hideLoading(); err.textContent = 'Error saving. Please try again.'; }
+}
+
+// ===================== LOGOUT =====================
+function doLogout() {
+  currentUser = null;
+  if (tickInterval) clearInterval(tickInterval);
+  initLogin();
+  showScreen('screen-login');
+}
+
+// ===================== INIT =====================
+window.addEventListener('DOMContentLoaded', async () => {
+  // Init all screens hidden except login
+  document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+  document.getElementById('screen-login').style.display = 'flex';
+  applySky('screen-login');
+  initRegister();
+  await initLogin();
+  // Manager auto-refresh
+  setInterval(() => {
+    if (currentUser && currentUser.isManager) {
+      const activeTab = document.querySelector('.tab-btn.active');
+      if (activeTab && activeTab.id === 'tab-btn-staff') renderMgrStaff();
+    }
+  }, 30000);
+});
+</script>
+</body>
+</html>

@@ -631,28 +631,24 @@ async function refreshStaffActions() {
     const last = today.length > 0 ? today[0] : null;
     const isClockedIn = last && !last.clock_out;
 
-    // Check for an open break (break_start set, no break_end)
     const breaks = await db.getBreaks('&staff_id=eq.' + currentUser.id);
     const todayBreaks = breaks.filter(b => isSameDay(b.break_start, nowMs()));
     const openBreak = todayBreaks.find(b => !b.break_end);
 
     if (openBreak) {
       const elapsed = fmtDuration(nowMs() - openBreak.break_start);
-      badge.innerHTML = '<span class="status-badge status-break">⏸ On Break</span>';
-      actions.innerHTML = `<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">Break started at ${fmtTime(openBreak.break_start)} (${elapsed} ago)</div>
-        <button class="btn btn-green" onclick="doClockBackIn('${openBreak.id}')">▶ Clock Back In</button>`;
+      badge.innerHTML = '<span class="status-badge status-break">On Break</span>';
+      actions.innerHTML = '<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">Break since ' + fmtTime(openBreak.break_start) + ' (' + elapsed + ')</div><button class="btn btn-green" onclick="doClockBackIn(\'' + openBreak.id + '\')">Clock Back In</button>';
     } else if (isClockedIn) {
-      badge.innerHTML = '<span class="status-badge status-in">● Clocked In</span>';
-      actions.innerHTML = \`<div class="action-row">
-        <button class="btn btn-red" onclick="doClockOut()">🏠 Clock Out</button>
-        <button class="btn btn-outline" onclick="doStartBreak('${last.id}')">☕ Personal Break</button>
-      </div>\`;
+      badge.innerHTML = '<span class="status-badge status-in">Clocked In</span>';
+      actions.innerHTML = '<div class="action-row"><button class="btn btn-red" onclick="doClockOut()">Clock Out</button><button class="btn btn-outline" onclick="doStartBreak(\'' + last.id + '\')">Personal Break</button></div>';
     } else {
-      badge.innerHTML = '<span class="status-badge status-out">○ Not Clocked In</span>';
-      actions.innerHTML = \`<button class="btn btn-gold" onclick="doClockIn()">🐾 Clock In</button>\`;
+      badge.innerHTML = '<span class="status-badge status-out">Not Clocked In</span>';
+      actions.innerHTML = '<button class="btn btn-gold" onclick="doClockIn()">Clock In</button>';
     }
   } catch(e) {
-    actions.innerHTML = '<div class="error-msg">Could not load status.</div>';
+    console.error('refreshStaffActions error:', e);
+    actions.innerHTML = '<div class="error-msg">Could not load status. Please refresh.</div>';
   }
 }
 async function updateStaffStats() {

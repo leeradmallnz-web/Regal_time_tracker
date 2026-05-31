@@ -123,7 +123,6 @@ select.text-input{cursor:pointer;}
 
 input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;cursor:pointer;}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
 
 </head>
 <body>
@@ -290,70 +289,57 @@ input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;c
 <script>
 // ===================== CONFIG =====================
 const SUPABASE_URL = 'https://etonoiijjskgucjkpeua.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_V97eLvMIbw_0Xi66eVOGZA_jVNoSzI7';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0b25vaWlqanNrZ3VjamtwZXVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2OTM2ODksImV4cCI6MjA5NDI2OTY4OX0.K_8OlMQTTPkJy1APkx56Ir5RCjg_OvMmFF511-m8o9k';
 const MANAGER_PIN  = '0000';
 
-// ===================== SUPABASE CLIENT =====================
-const _sbc = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-function _check(error) { if (error) throw new Error(error.message || JSON.stringify(error)); }
-
-async function _applyFilter(q, filter) {
-  const parts = (filter||'').replace(/^&/,'').split('&').filter(Boolean);
-  for (const p of parts) {
-    const eqIdx = p.indexOf('=');
-    if (eqIdx < 0) continue;
-    const key = p.slice(0, eqIdx);
-    const val = p.slice(eqIdx + 1);
-    if (val.startsWith('eq.')) q = q.eq(key, val.slice(3));
-    else if (val.startsWith('gte.')) q = q.gte(key, Number(val.slice(4)));
-    else if (val.startsWith('lte.')) q = q.lte(key, Number(val.slice(4)));
-    else if (val.startsWith('not.is.')) q = q.not(key, 'is', null);
-    else if (val === 'null') q = q.is(key, null);
+// ===================== SUPABASE REST API =====================
+async function sbFetch(path, method='GET', body=null) {
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+  if (method === 'POST' || method === 'PATCH') headers['Prefer'] = 'return=representation';
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, opts);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('DB ' + res.status + ': ' + txt);
   }
-  return q;
+  if (method === 'DELETE' || res.status === 204) return [];
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : [];
 }
 
 const db = {
   async getStaff() {
-    const {data,error} = await _sbc.from('staff').select('*').order('name');
-    _check(error); return data||[];
+    return sbFetch('staff?select=*&order=name.asc');
   },
   async addStaff(s) {
-    const {error} = await _sbc.from('staff').insert(s);
-    _check(error);
+    return sbFetch('staff', 'POST', s);
   },
   async deleteStaff(id) {
-    const {error} = await _sbc.from('staff').delete().eq('id', id);
-    _check(error);
+    return sbFetch('staff?id=eq.' + id, 'DELETE');
   },
   async getEntries(filter='') {
-    let q = _sbc.from('time_entries').select('*').order('clock_in', {ascending:false});
-    q = await _applyFilter(q, filter);
-    const {data,error} = await q;
-    _check(error); return data||[];
+    return sbFetch('time_entries?select=*&order=clock_in.desc' + filter);
   },
   async addEntry(e) {
-    const {error} = await _sbc.from('time_entries').insert(e);
-    _check(error);
+    return sbFetch('time_entries', 'POST', e);
   },
   async updateEntry(id, data) {
-    const {error} = await _sbc.from('time_entries').update(data).eq('id', id);
-    _check(error);
+    return sbFetch('time_entries?id=eq.' + id, 'PATCH', data);
   },
   async getBreaks(filter='') {
-    let q = _sbc.from('breaks').select('*').order('break_start', {ascending:false});
-    q = await _applyFilter(q, filter);
-    const {data,error} = await q;
-    _check(error); return data||[];
+    return sbFetch('breaks?select=*&order=break_start.desc' + filter);
   },
   async addBreak(b) {
-    const {error} = await _sbc.from('breaks').insert(b);
-    _check(error);
+    return sbFetch('breaks', 'POST', b);
   },
   async updateBreak(id, data) {
-    const {error} = await _sbc.from('breaks').update(data).eq('id', id);
-    _check(error);
+    return sbFetch('breaks?id=eq.' + id, 'PATCH', data);
   },
 };
 

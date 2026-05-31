@@ -321,6 +321,7 @@ const db = {
   async addStaff(s) { return sbFetch('staff', {method:'POST', body:JSON.stringify(s)}); },
   async deleteStaff(id) { return sbFetch('staff?id=eq.'+id, {method:'DELETE', prefer:''}); },
   async getEntries(filter='') { return sbFetch('time_entries?order=clock_in.desc'+filter); },
+  async getEntriesInRange(start, end) { return sbFetch('time_entries?order=clock_in.asc&clock_in=gte.'+start+'&clock_in=lte.'+end); },
   async addEntry(e) { return sbFetch('time_entries', {method:'POST', body:JSON.stringify(e)}); },
   async updateEntry(id, data) { return sbFetch('time_entries?id=eq.'+id, {method:'PATCH', body:JSON.stringify(data)}); },
   async getBreaks(filter='') { return sbFetch('breaks?order=break_start.desc'+filter); },
@@ -809,7 +810,8 @@ async function renderWeekReport(offset) {
     if (!staff.length) { area.innerHTML = '<div class="no-data">No staff to show.</div>'; return; }
     const days = ['Mon','Tue','Wed','Thu','Fri'];
     let html = '<table class="staff-table" style="min-width:420px;"><thead><tr><th>Name</th>' + days.map(d=>'<th>'+d+'</th>').join('') + '<th>Total</th></tr></thead><tbody>';
-    const allBreaksR = await db.getBreaks('');
+    let allBreaksR = [];
+    try { allBreaksR = await db.getBreaks(''); } catch(be) { console.warn('Breaks load failed:', be); }
     const rangeBreaks = allBreaksR.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime());
     staff.forEach(s => {
       html += '<tr><td style="font-weight:800;white-space:nowrap;">' + s.name + '</td>';
@@ -841,7 +843,10 @@ async function renderWeekReport(offset) {
     });
     html += '</tbody></table>';
     area.innerHTML = html;
-  } catch(e) { area.innerHTML = '<div class="error-msg">Could not load data.</div>'; }
+  } catch(e) { 
+    console.error('renderWeekReport error:', e);
+    area.innerHTML = '<div class="error-msg">Could not load data: ' + (e.message||'unknown error') + '</div>'; 
+  }
 }
 function changeWeek(dir) { renderWeekReport(reportWeekOffset + dir); }
 async function exportCSV() {
@@ -852,7 +857,7 @@ async function exportCSV() {
     const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
     const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
     let csv = 'Staff Name,' + days.join(',') + ',Weekly Total\n';
-    const allBreaksW = await db.getBreaks('');
+    let allBreaksW = []; try { allBreaksW = await db.getBreaks(''); } catch(be) { console.warn('Breaks load failed:', be); }
     staff.forEach(s => {
       let row = s.name;
       let totalMs = 0;
@@ -929,7 +934,7 @@ async function exportCSV() {
     a.href = url; a.download = 'regal-pet-salon-' + start.toISOString().slice(0,10) + '.csv';
     a.click();
     URL.revokeObjectURL(url);
-  } catch(e) { hideLoading(); alert('Export failed. Please try again.'); }
+  } catch(e) { hideLoading(); alert('Export failed: ' + (e.message||'unknown')); console.error(e); }
 }
 async function renderSettingsStaff() {
   const el = document.getElementById('settings-staff-list');

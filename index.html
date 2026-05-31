@@ -759,7 +759,7 @@ async function doLogin() {
   if (pin.length < 4) { err.textContent = 'Please enter your 4-digit code.'; return; }
   if (name === '__manager__') {
     if (pin === MANAGER_PIN) {
-      currentUser = {id:'manager', name:'Manager', isManager:true};
+      currentUser = {id:'manager', name:'Kerry', isManager:true};
       await showManagerDash();
     } else {
       err.textContent = 'Incorrect code. Try again.';

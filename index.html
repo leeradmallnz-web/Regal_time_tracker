@@ -816,8 +816,8 @@ async function doRegister() {
 // ===================== STAFF DASHBOARD =====================
 async function showStaffDash() {
   showScreen('screen-staff');
-  playBark();
   const user = currentUser;
+  speak('Hello ' + user.name + ', welcome to Regal Pet Salon!');
 
   // Set all static content IMMEDIATELY - no async needed
   document.getElementById('staff-welcome').textContent = 'Hi, ' + user.name + '! 🌟';
@@ -946,6 +946,7 @@ async function doClockOut() {
     if (!last) { hideLoading(); return; }
     await db.updateEntry(last.id, {clock_out:nowMs()});
     hideLoading();
+    speak('Goodbye ' + currentUser.name + ', see you tomorrow! Have a wonderful evening!');
     await refreshStaffActions();
     await updateStaffStats();
     await renderRecentShifts();
@@ -1405,88 +1406,26 @@ function closeEditModal() {
 }
 
 
-// ===================== BARK SOUND =====================
-function playBark() {
+// ===================== VOICE GREETINGS =====================
+function speak(text) {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-    function bark(startTime, pitch=1, volume=0.4) {
-      // Main bark tone - noise burst shaped like a bark
-      const bufferSize = ctx.sampleRate * 0.15;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1);
-      }
-      const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-
-      // Bandpass filter to shape the bark frequency
-      const bpf = ctx.createBiquadFilter();
-      bpf.type = 'bandpass';
-      bpf.frequency.setValueAtTime(600 * pitch, startTime);
-      bpf.frequency.exponentialRampToValueAtTime(300 * pitch, startTime + 0.08);
-      bpf.Q.value = 1.8;
-
-      // Second bandpass for richness
-      const bpf2 = ctx.createBiquadFilter();
-      bpf2.type = 'bandpass';
-      bpf2.frequency.setValueAtTime(900 * pitch, startTime);
-      bpf2.frequency.exponentialRampToValueAtTime(450 * pitch, startTime + 0.08);
-      bpf2.Q.value = 2.5;
-
-      // Envelope - sharp attack, quick decay
-      const gainNode = ctx.createGain();
-      gainNode.gain.setValueAtTime(0, startTime);
-      gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.14);
-
-      const gainNode2 = ctx.createGain();
-      gainNode2.gain.setValueAtTime(0, startTime);
-      gainNode2.gain.linearRampToValueAtTime(volume * 0.5, startTime + 0.01);
-      gainNode2.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
-
-      // Add a tone underneath for warmth
-      const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(180 * pitch, startTime);
-      osc.frequency.exponentialRampToValueAtTime(120 * pitch, startTime + 0.1);
-      const oscGain = ctx.createGain();
-      oscGain.gain.setValueAtTime(0, startTime);
-      oscGain.gain.linearRampToValueAtTime(volume * 0.3, startTime + 0.01);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.1);
-
-      const master = ctx.createGain();
-      master.gain.value = 0.7;
-
-      noise.connect(bpf);
-      bpf.connect(gainNode);
-      gainNode.connect(master);
-
-      noise.connect(bpf2);
-      bpf2.connect(gainNode2);
-      gainNode2.connect(master);
-
-      osc.connect(oscGain);
-      oscGain.connect(master);
-
-      master.connect(ctx.destination);
-
-      noise.start(startTime);
-      noise.stop(startTime + 0.15);
-      osc.start(startTime);
-      osc.stop(startTime + 0.12);
-    }
-
-    // Two barks - woof woof!
-    bark(ctx.currentTime, 1.0, 0.45);
-    bark(ctx.currentTime + 0.22, 0.95, 0.38);
-
-    // Close context after sounds finish
-    setTimeout(() => { try { ctx.close(); } catch(e){} }, 1000);
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.rate = 0.95;
+    msg.pitch = 1.05;
+    msg.volume = 1.0;
+    // Prefer a friendly English voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Karen') || v.name.includes('Moira') || v.name.includes('Tessa') || v.name.includes('Daniel'));
+    if (preferred) msg.voice = preferred;
+    window.speechSynthesis.speak(msg);
   } catch(e) {
-    console.log('Audio not available:', e);
+    console.log('Speech not available:', e);
   }
+}
+function playBark() {
+  // Kept for compatibility - now uses voice
 }
 
 // ===================== INIT =====================

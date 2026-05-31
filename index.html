@@ -332,6 +332,9 @@ const db = {
   async updateEntry(id, data) {
     return sbFetch('time_entries?id=eq.' + id, 'PATCH', data);
   },
+  async updateStaff(id, data) {
+    return sbFetch('staff?id=eq.' + id, 'PATCH', data);
+  },
   async getBreaks(filter='') {
     return sbFetch('breaks?select=*&order=break_start.desc' + filter);
   },
@@ -733,7 +736,7 @@ async function initLogin() {
   sel.innerHTML = '<option value="">— Loading staff… —</option>';
   try {
     staffCache = await db.getStaff();
-    sel.innerHTML = '<option value="">— Select your name —</option><option value="__manager__">Manager</option>';
+    sel.innerHTML = '<option value="">— Select your name —</option><option value="__manager__">Kerry (Manager)</option>';
     staffCache.forEach(s => {
       const o = document.createElement('option');
       o.value = s.id;
@@ -741,11 +744,11 @@ async function initLogin() {
       sel.appendChild(o);
     });
     if (!staffCache.length) {
-      sel.innerHTML = '<option value="">— No staff yet — Register below —</option><option value="__manager__">Manager</option>';
+      sel.innerHTML = '<option value="">— No staff yet — Register below —</option><option value="__manager__">Kerry (Manager)</option>';
     }
   } catch(e) {
     console.error('Failed to load staff:', e);
-    sel.innerHTML = '<option value="">— Select your name —</option><option value="__manager__">Manager</option>';
+    sel.innerHTML = '<option value="">— Select your name —</option><option value="__manager__">Kerry (Manager)</option>';
     document.getElementById('login-error').textContent = 'Could not load staff list. Check internet connection.';
   }
 }
@@ -775,7 +778,12 @@ async function doLogin() {
     return;
   }
   currentUser = user;
-  await showStaffDash();
+  if (user.is_manager) {
+    currentUser.isManager = true;
+    await showManagerDash();
+  } else {
+    await showStaffDash();
+  }
 }
 
 // ===================== REGISTER =====================
@@ -1175,15 +1183,36 @@ async function renderSettingsStaff() {
     const staff = await db.getStaff();
     if (!staff.length) { el.innerHTML = '<div class="no-data">No staff registered.</div>'; return; }
     el.innerHTML = staff.map(s => `
-      <div class="shift-stat">
-        <div style="display:flex;align-items:center;gap:8px;">
+      <div class="shift-stat" style="flex-wrap:wrap;gap:6px;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;">
           <div style="width:32px;height:32px;flex-shrink:0;">${DOG_AVATARS[s.avatar||0].svg}</div>
-          <span class="fw700">${s.name}</span>
+          <div>
+            <div class="fw700">${s.name} ${s.is_manager ? '<span style="font-size:11px;background:#fff3cd;color:#856404;padding:2px 6px;border-radius:8px;font-weight:700;">MANAGER</span>' : ''}</div>
+          </div>
         </div>
-        <button class="btn btn-sm btn-gray" style="color:var(--red);border-color:var(--red);" onclick="removeStaff('${s.id}')">Remove</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm ${s.is_manager ? 'btn-gray' : 'btn-blue'}" onclick="toggleManager('${s.id}', ${!s.is_manager})">${s.is_manager ? '⬇ Demote' : '⬆ Make Manager'}</button>
+          <button class="btn btn-sm btn-gray" style="color:var(--red);border-color:var(--red);" onclick="removeStaff('${s.id}')">Remove</button>
+        </div>
       </div>`).join('');
   } catch(e) { el.innerHTML = '<div class="error-msg">Could not load staff.</div>'; }
 }
+async function toggleManager(id, makeManager) {
+  showLoading(makeManager ? 'Granting manager access…' : 'Removing manager access…');
+  try {
+    await db.updateStaff(id, {is_manager: makeManager});
+    staffCache = await db.getStaff();
+    hideLoading();
+    renderSettingsStaff();
+    const msg = makeManager ? 'Manager access granted!' : 'Manager access removed.';
+    const err = document.getElementById('mgr-error');
+    if (err) { err.className='error-msg success-msg'; err.textContent='✓ ' + msg; setTimeout(()=>{err.textContent='';err.className='error-msg';},2500); }
+  } catch(e) {
+    hideLoading();
+    alert('Error updating staff: ' + e.message);
+  }
+}
+
 async function removeStaff(id) {
   if (!confirm('Remove this staff member? Their time records will be kept.')) return;
   showLoading('Removing…');

@@ -538,17 +538,27 @@ function buildAvatarGrid(containerId, selectedIdx, onSelect) {
 function startClock(clockId, dateId) {
   if (tickInterval) clearInterval(tickInterval);
   const tick = () => {
-    const now = new Date();
-    const el = document.getElementById(clockId);
-    if (el) el.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-    if (dateId) {
-      const del = document.getElementById(dateId);
-      if (del) del.textContent = now.toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-    }
-    if (currentUser && !currentUser.isManager) updateStaffStats();
+    try {
+      const now = new Date();
+      const el = document.getElementById(clockId);
+      if (el) el.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+      if (dateId) {
+        const del = document.getElementById(dateId);
+        if (del) del.textContent = now.toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+      }
+    } catch(e) { console.error('Clock tick error:', e); }
   };
   tick();
-  tickInterval = setInterval(tick, 15000);
+  tickInterval = setInterval(tick, 10000);
+  // Update stats separately every 30s so clock is never blocked
+  if (currentUser && !currentUser.isManager) {
+    updateStaffStats().catch(e => console.warn('Stats update failed:', e));
+    setInterval(() => {
+      if (currentUser && !currentUser.isManager) {
+        updateStaffStats().catch(e => console.warn('Stats update failed:', e));
+      }
+    }, 30000);
+  }
 }
 
 // ===================== LOGIN =====================
@@ -648,8 +658,9 @@ async function showStaffDash() {
   document.getElementById('staff-avatar-display').innerHTML = DOG_AVATARS[user.avatar || 0].svg;
   setRandomGreeting('staff-greeting-text', user.name);
   startClock('staff-clock', 'staff-date');
-  await refreshStaffActions();
-  await renderRecentShifts();
+  try { await refreshStaffActions(); } catch(e) { console.error('Actions error:', e); }
+  try { await updateStaffStats(); } catch(e) { console.error('Stats error:', e); }
+  try { await renderRecentShifts(); } catch(e) { console.error('Shifts error:', e); }
 }
 async function refreshStaffActions() {
   const badge = document.getElementById('staff-status-badge');

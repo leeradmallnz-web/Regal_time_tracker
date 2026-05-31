@@ -1124,8 +1124,8 @@ async function exportCSV() {
       csv += row + '\n';
     });
     csv += '\nDetailed Time Log (' + fmtDate(start) + ' to ' + fmtDate(end) + ')\n';
-    // Detailed log - one row per person per day
-    csv += 'Staff Name,Date,First Clock In,Last Clock Out,Total Break Time,Break Sessions,Hours Worked\n';
+    // PayHero import format - one row per person per day
+    csv += 'Employee,Work Name,Date,Employee Email,Notes,Start Time,End Time,Duration,Break Duration,Units\n';
     const allBreaks = await db.getBreaks('');
     const allBreaksInRange = allBreaks.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime());
 
@@ -1167,7 +1167,11 @@ async function exportCSV() {
       const tbh = Math.floor(totalBreakMs/3600000), tbm = Math.floor((totalBreakMs%3600000)/60000);
       const breakDurStr = totalBreakMs > 0 ? tbh+':'+tbm.toString().padStart(2,'0') : '0:00';
       const breakDetail = breakSessions.length ? breakSessions.join(' | ') : 'None';
-      csv += `${day.staffName},${d},${fmtTime(firstIn)},${fmtTime(lastOut)},${breakDurStr},"${breakDetail}",${wh}:${wm.toString().padStart(2,'0')}\n`;
+      // Format for PayHero: Duration and Break Duration as decimal hours (e.g. 7.5)
+      const workedDecimal = (workedMs / 3600000).toFixed(2);
+      const breakDecimal = totalBreakMs > 0 ? (totalBreakMs / 3600000).toFixed(2) : '0.00';
+      const dateFormatted = new Date(firstIn).toLocaleDateString('en-NZ', {day:'2-digit', month:'2-digit', year:'numeric'});
+      csv += `${day.staffName},Grooming,${dateFormatted},,, ${fmtTime(firstIn)},${fmtTime(lastOut)},${workedDecimal},${breakDecimal},1\n`;
     });
         hideLoading();
     const blob = new Blob([csv], {type:'text/csv'});

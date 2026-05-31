@@ -8,10 +8,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{--gold:#C8A84B;--red:#C0392B;--font-display:'Playfair Display',serif;--font-body:'Nunito',sans-serif;}
-html,body{height:100%;overflow:hidden;font-family:var(--font-body);}
+html,body{min-height:100%;font-family:var(--font-body);}
 body{background:#87CEEB;}
 
-.screen{display:none;position:fixed;inset:0;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;overflow-x:hidden;padding:20px 16px 40px;}
+.screen{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;overflow-x:hidden;padding:30px 16px 60px;}
 .screen.active{display:flex;}
 
 /* SKY */
@@ -22,17 +22,17 @@ body{background:#87CEEB;}
 
 .sun{position:fixed;border-radius:50%;pointer-events:none;z-index:0;transition:all 1s;}
 .sun-morning{width:90px;height:90px;background:radial-gradient(circle,#ffe066,#ff8c42);top:22%;left:50%;transform:translateX(-50%);box-shadow:0 0 60px 20px rgba(255,180,50,0.4);}
-.sun-day{width:64px;height:64px;background:radial-gradient(circle,#fffde7,#FFD600);top:6%;right:12%;box-shadow:0 0 40px 10px rgba(255,214,0,0.3);}
+.sun-day{width:64px;height:64px;background:radial-gradient(circle,#fffde7,#FFD600);top:5%;right:8%;box-shadow:0 0 40px 10px rgba(255,214,0,0.3);}
 .sun-evening{width:80px;height:80px;background:radial-gradient(circle,#ffd54f,#e64a19);bottom:28%;left:50%;transform:translateX(-50%);box-shadow:0 0 60px 20px rgba(230,74,25,0.4);}
 
 .star{position:fixed;background:white;border-radius:50%;pointer-events:none;animation:twinkle 3s infinite;}
 @keyframes twinkle{0%,100%{opacity:0}50%{opacity:0.9}}
 
 /* CARD */
-.card{background:rgba(255,255,255,0.94);backdrop-filter:blur(10px);border-radius:24px;padding:28px 22px;width:100%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.18);position:relative;z-index:1;margin:0 auto;}
+.card{background:rgba(255,255,255,0.94);backdrop-filter:blur(10px);border-radius:24px;padding:28px 22px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,0.18);position:relative;z-index:1;margin:0 auto;}
 
 /* LOGO */
-.logo-wrap{text-align:center;margin-bottom:6px;z-index:1;width:100%;max-width:440px;}
+.logo-wrap{text-align:center;margin-bottom:6px;z-index:1;width:100%;max-width:480px;margin-left:auto;margin-right:auto;}
 
 /* GREETING */
 .greeting-box{background:linear-gradient(135deg,#fff9e6,#fff3cd);border:2px solid var(--gold);border-radius:16px;padding:14px 16px;margin:12px 0;text-align:center;}
@@ -120,6 +120,8 @@ select.text-input{cursor:pointer;}
 /* OVERLAY */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
 .overlay-card{background:white;border-radius:20px;padding:24px;width:100%;max-width:360px;}
+
+input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -129,29 +131,7 @@ select.text-input{cursor:pointer;}
   <div class="sun sun-morning" id="login-sun"></div>
 
   <div class="logo-wrap" style="padding-top:24px;">
-    <svg viewBox="0 0 300 260" style="width:130px;height:auto;display:block;margin:0 auto 4px;" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="150" cy="185" rx="100" ry="14" fill="#1a1a1a"/>
-      <rect x="52" y="145" width="196" height="42" rx="6" fill="#1a1a1a"/>
-      <rect x="68" y="155" width="6" height="22" fill="white" opacity="0.3" rx="2"/>
-      <rect x="82" y="155" width="4" height="22" fill="white" opacity="0.2" rx="2"/>
-      <rect x="138" y="155" width="6" height="22" fill="white" opacity="0.3" rx="2"/>
-      <rect x="152" y="155" width="4" height="22" fill="white" opacity="0.2" rx="2"/>
-      <rect x="208" y="155" width="6" height="22" fill="white" opacity="0.3" rx="2"/>
-      <rect x="222" y="155" width="4" height="22" fill="white" opacity="0.2" rx="2"/>
-      <path d="M52 150 L52 80 L90 115 L150 55 L210 115 L248 80 L248 150 Z" fill="#1a1a1a"/>
-      <circle cx="52" cy="78" r="10" fill="white" stroke="#1a1a1a" stroke-width="3"/>
-      <circle cx="150" cy="52" r="12" fill="white" stroke="#1a1a1a" stroke-width="3"/>
-      <circle cx="248" cy="78" r="10" fill="white" stroke="#1a1a1a" stroke-width="3"/>
-      <circle cx="90" cy="113" r="8" fill="white" stroke="#1a1a1a" stroke-width="3"/>
-      <circle cx="210" cy="113" r="8" fill="white" stroke="#1a1a1a" stroke-width="3"/>
-      <circle cx="150" cy="135" r="9" fill="white"/>
-      <circle cx="137" cy="124" r="5" fill="white"/>
-      <circle cx="163" cy="124" r="5" fill="white"/>
-      <circle cx="130" cy="133" r="4" fill="white"/>
-      <circle cx="170" cy="133" r="4" fill="white"/>
-      <text x="150" y="222" font-family="Georgia,serif" font-size="44" font-weight="700" fill="#C0392B" text-anchor="middle" letter-spacing="3">REGAL</text>
-      <text x="150" y="248" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#1a1a1a" text-anchor="middle" letter-spacing="5">PET SALON</text>
-    </svg>
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAEsASwDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD7LooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiqWuarpuh6Rc6vq97BY2FrGZJ55n2oijuT+nueKALtFcN4U+LHgnxJ4jXw7Zahd22qSxmW3ttQ0+eze5jHVohMi7xjnjnHOK7mgAooqDUUuH0+4S0kEdw0TCJz0V8HafzxQBwuvfFSws9Su7HQ/CvivxWbGQxXs2i2CywwSL96PzHdA7r3VNxB4ODxW78PPG/h7x3or6p4fu3kWGZre6t5ojFPazL96OWNuUYeh/DNeVfs+eLtP0XTLjw9rMN3aussSWkn2aSRAyQRxz2zlQfLnSdJiyPgt5gkG4PmrnwqntNX/AGkfiLrnhpkl0IWVlZX1xCcw3GopuLbSOGZEIViO596APbaKKKACis/xHrek+HdGuNZ1u+hsbC2UGWaU8DJwAAOSSSAAMkkgAEmuZ8G/FLwZ4q16TQNOv7q31dIvOWx1Cwms5pIv76JMql1+mcd6AO2ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiivIvj34klsNV0fRLnV9Q0XQ5l+0apd2M/2eYxfaIIP9dgmKJDNvkdcHAUZUFjQB67RXh3gm7v/B3xxsPBWneK9R8TeGNf0WbUrdL+9+2TWEkTgblmOWaJwSAGJ+YcGvcaACvPvj1pOqap4Lik0qG5uJLC9ju5IrWPzJiqq6h40OBI8TOkyp/EYgBzivQaKAPlifxk3xV8Q/DzwVpdtG/inw9rFvqup30AnWO0tLdQsrZnjjkDSllHl4bGRuJ619TjpXy38S71fCn7ReufEuJWaDw5/Y0Osbck/YbxLiKVsDrsZYHx7V9QW00Vzbx3EEqSxSoHSRGyrKRkEEdQRzQBJRRRQB8c/t36Yf8AhMNLl0JDYXsmiX17qs1oxie6ii2CPzSpG8L8wG7PBxX0z8HLPSrL4W+GV0axtbKzm0u3nWK3jCJl4lZmwO5JJJ6k14Z8RZtN8Y/FXxwtxNlJtIfwLohBBWXUHhku58emwrHGT6sB3ruv2MvFcPif4B6HF5m670dW0y6QnlDEfk/OMofzoA9mooooA8v/AGkNP1O48GW2p6c86rpVxJczSQR+ZJbA280a3KoOXMLyLJtHzYVivzAV51Y+KZvjL43+HN34d0pTN4d1Fr/VtZsxK1lDCIipgjmljjZzKSAUAOAOT1x6d8dLqXU9M074dadI41HxZcfZJTGfmgsFw15MfQCPMY/25UFVv2V0tovgbokVpGI4Y7m/REHRAL6cbfw6UAeoDpRRRQAUZrm/ifrd54d8B6tq9h5K3UEIEMkwzHEzsqCRx3RN249OFPSvAPEmoT6D8ML34p+GviH4kk8SaFc41XTNV1Xz4rhlufJeCe1wFgY9VCKuMjGRhqAPqOiobKY3FnDOY2jMkauUbquRnB9xU1ABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFc9458H6P4wsIbfUvtUE9s5ktL2znaC5tmKlWKOvQFSQVOVYcEGuhooA8G+BHhy28HfHPx94d1C5utT1M2lleaZqN/J5lzJp7Aq0ecABUlXGFAHT0Fe8187/tXaze/Djxt4E+LOm2slylpPNpGqQR9bi1lXzNn1GyRh23AV7b4I8V6B408OWviDw3qUOoafcrlZIzyp7qw6qw7qeRQBt0HpTZJEjjaSR1RFBLMTgADuTXzv8a/jLH4je8+HPwu1S2nvpIX/tvxCJP9C0W0HEspl6FsZAIPBOAS2AADY+E2m6d8SL74s+INQiFzonibUv7Hg9JrW1h8nzEPoWZyD6ivOPh58V9W+AHiJ/hN8WIrufRLVj/Ymtxxl/8ARSTs3KOWjA/u5ZDlcEAY7T9jfx/oviO38ReEPDsRg0Hw2baHR1kQLLNblWDzP/tvKryH08wDtVf9uvWIdC8H+Hr3U/DOk+I9Hlv5LW7tL5GVgWj3I8UyEPE42MMqcHPINAHqVn8Y/hVd2AvYfiH4ZEJGfn1GNGH1ViGB9iK878cftB6drU0/hT4RSR65rskTGbVpFMenaTEB89zLIwAIQc/3c9yflPxn/wAJN8G0f7Snws1yWU8/Z5vFR8gH6rAHI/4ED71m+MPiXq2taIfDekadpnhfw2XDvpekRGNJ2HRp5GJknYf7bEDsBQBr/Ef4grH4t0GDwZfzyaX4Sn83Tr2YESX14ZBLNeyA87pZACAeiKg9a9M8NfES6+FHjUfFLwpYvqHw88ZSb7+wjb/jxu+WltyeiSxszFM4DxsPqPmeSCaOOOWSKRElBMbMpAcA4JB710/grxn4l8Cz3EVmsUljfxqL3S9RtvOtL2PqvmRNwfZhgjsRQB+jng/4/wDwj8TWUdxa+NdMsZGGWt9SlFrKh9CJMA/VSR71V8Z/tBfDfQwtnpGsJ4q1u4YRWel6IftUs8h6LuXKrz6nPoDXwc/iv4R3+JdQ+FWoWU/V10nxI8cDHvhJopGUewY179+yH4j8Jz2/jvWPDvgDS/DsOgaMbhLpriS7vWYrITunfAC4j+6iqPXNAHSfDzxfqmu/tG2Gj6heW8/iW4SS58RNaPvg0q1hRmg0uF+hxKyPM4+84C84Ndx+ybqyQ2njTwFcMEvvDPiW8QRk8/Z5pWeN/oW8z9PWvCP+CcGkG68f+KNfdS/2PTI7bcf700m4/pEa7z9omy8S/B34yW3xz8KWbXmj6hGlp4jtFyFPRQWx90MFTDdnXn72CAfVdFcX8LPif4M+JOjJqHhjV4p5NoM9nIQlzbnuHj6j6jIPYmu0zQBW1aGyuNLuoNSjglsZIXS5ScAxtGVIYMDwVxnOe1fPP7Pfw00rxj4asvHHii61nUrGTU57vQtIvL13tbe1jlZbUuh5kZVX5S7MApHFJ+2F8XrXTNDf4X+FLyO68U6+y2M6wvn7HFIQpDEdJHztC9QCTxxn3zwlo1t4d8L6XoFmALbTrOK1iwMfLGgUfyoA1KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPLf2podvwfvdbjhWafQbyz1eJWXcD5E6M4I7gxmQEehNeb+Iv2YZ7PWpfEXwf+IWqeDPth8x7SN5DBg8jYyMGC88KwbHY17B8ftU8OaR8HPFFx4sluY9Im0+S1n+zAGZvNHlqsYPG8lhjPAPJ4Br5r8GfFL9oD4rRRaR8LNFtPD2gWUaWo1S8USsqqoX55nXa74AJEceeaAN/xD+zz43ufDWoap8Qfih4r8ax2Vs86aHp0robsopbyw0hYZOMcIT6c0y58J3Fv4ePhXSPDEPhfwN4l8EyNNbXnlwyWWsffQ3M0pEjsGRVBbgZ4A5rtdD+AHiLU1S5+Jfxd8X+IJTy9nY3r2lqD6YBJI+gWvLdei8NeDrDxxNpnw48MQ6p4J8R2f203ds2ozXWlTEbZN9wWZZGyCWXoOnrQBkfsbaJrXw5+Jd1qXiHUvD0GmXunPbTpBrdtdSK+5XQ7IXc5ypH/AAI175+0v4di+LXwpl8P6FdxxXiXkN1BPd208cC7SQ2X8s4+Vmr5m+IHxP8AHfgb9pI6bJ4t1BfDWn63Bcw2VvIILZ7CRkkRSkYVWXynA5B6V9m/HXSBr/wX8X6Wo3tPo9wYh1y6xl0/VRQB8J+Iv2b9T0HQb/VNR+I3gKJrO3ef7MdSYSy7VJ2KCoyxxgD1Irzz4RfDfxJ8UPFDeHvDCWv2mO2a5lkupfLiijUgZJAJ6sowAetceT7D8q7L4NfEDxD8NvHFt4i8N/Z3uSht5YLkExTxuRlGwQQMhTkEYIFAH2P4qmtfGHhLwv4Ih+HOo6lrngrVtOfXNNitUEVlFCAZAkrlUlWWMZRFJLqQSBXJftQeHtU+OtjH4r8AaSv9leFLe6hu7m+RrWe6kUhpIYo3XcfK2n720bmYDJBr6k8BaJf6VYXV7rtxbXWu6rOLvUpLaIpCJPLSNY4wcnYiIqgkknBJ64Hz3+1/4l8XfCnwte2XhifTV0Pxfc3ImaSJvtVnNIuZxGc7SsmWbJGVLNzyuAD5C+FHgU+Ptfn0hfEug6A0VsZxNq1yYkkwwGxcA5b5s49Aa+rPg18ItZ8F/Cf4kaLDruj6pfeJbFLSzudP8+aCP5JVPmMsZK/6zjg18R1794PnfS/2IvGE6sYn1XxTbWasvBIRYpMf+OmgD379k3QtN+DHhzXLPxr4g0iz1DUb1JFbfKieSkeFy0qJzuZ67/x54q03xR4h8I6d4b8S6NqOjC/mn14Wup20iyW620gW3kjL/Osjuo24PTJxjNL+yFp9xZfs8+FjeTTzT3UEl07SuWJEkrsvXtt2151+0lrOjaZe+O9QuPDXhjU7bw/o+nRQW9/pEMu/Ubudzu37Q/ywqDgMBznrQB5DpPwri8V+LLOCHwJ49+FviC6mIhurKze60pW5O7cSkkA+juPTHSoPFWoX/h/UNQ8LeIf2pdeY2Ez2t1a2ljfyy7kOGQEsqnpj7+PepPgwvhTx3oPi3WZNL1X4ex+G9OOoXWo+F9YuER25IjFvKzAEhWxh15AHfNZx1jxfr1tt8J/EDSviVbqMnRPEemxNqQGM7VjuAxkIH/PCVm9qALfgHwB4dtf2rfAGg6BNqd9b/ZLXW7ybUQomaQwtdDcq5CfL5Q25POeTX6DDpXxB+zN8QPCviX9oe01TxJoMugeMbi0fTozayN9indIljVDFJloHVItoAYqemAev2/QAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAcv8VPBOjfEPwPf+FNe+0LZXYVi9uwWSNkYOrKSCMgjuPWsr9nq+t9T+C/ha/tNNtdMt5rFWitLZdscK7mAUevTknknJPJrublxHbySMcBVJP4CvEfgZ4+8FeDP2fPBY8UeKdI0qQ6WjiK4ulEpBLEYTO48HsKAPcq+d/jX4dgh+OtjHcAR6X8RPD134bvXP3UukXfbyH/aPCj6Voa7+1n8GtNdkttW1LVivH+hae+D9DJsFeT/FD9qb4beL4NMhk8HeJ5m0rU4dTsphdQ2rpPETtII38ckEehoA8U+O1vcah4S8AeKLmPZeNpcmg6iv8S3WnyGL5/8AaMTRH8K/QD4H63H4y+CXhjVbj96b3SY4rnJ+9Iq+VJ/48rV8ReKvjh8PNctL2xuPgylzaXmsS6zJHc+I5gBdyrtd1EaKVDADKg4yAa2/Bn7UfiDwr4fg8PeB/hpothpcDO0Nv5t3cBCzFm5LZ5JJ696APnbxJpsmj+IdS0mQHfZXcts2fVHKn+VZ9e733xJ17V9SutSPwB8E3V3dzPPPM/h66maR2JLMcydSSTSx+MPHD/6j9nfwV/wHwRK38yaAPH5fFXiaWKKKXxFq8kcKhIka+lIjUdAo3cD6VW1fWtY1jyf7W1a/1DyF2w/arl5fLX0XcTgfSvbh4s+I3b9nrwlj/sQ3/wAKa3i34gj/AFn7PPg8j/a8CSD+VAHgmDXtniOVrP8AY68J6agbOq+K7y7wP4vKi8v+bCp5fGvihP8Aj7/Z48DBffwjcR/ycVNqHxg1CXStK0nV/gl4R+waRJJLY24sbyFIGkYM5UeZ3KgnOelAH6A+AdIGgeBdC0NVCf2fp1va490jVT+or4n/AGuNeaTwhdnepfxR4zvrxWB5a209Fsoh/ullciteD9tjxNBj7f8AD/Tn552Xksf/AKEprzrxb8UvhP41t9Jt/EHw88S6fHpds1tbf2d4iV9qtI0jEiSL5mLOSSeTx6UAWrGT/hDf2K7uUEpfeOteEKkcE2lt1P03ow/4HXjHgqPz/GGjQ/8APTUIF/ORRXtnjbxh8E/Hfhjwt4abVPG/hiz8N2j2tosmnW92jbyC8j7JFJYkDOAPoKxfCnw88EP4p0nUPDfxm8LXi217DO8OrwT6XIQsikgGRWTOB/ex70Ae9fBGw0j4g/tM+NNR8QWgbVfBuvXUum3UKrGZ4mmljWOfA/eeVtBQ/e5wSQAB9Z18l/sfXEEv7RvxiaCaOaOa/llikjcMrobuUhgRwQQw5FfWlABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB5p+05J41j+C+unwDDcy6yyIuLVd04hLgSmMdS23PTnGcc4r84PA9p4Ot/EUlp8SV8TWdqmFK6ZFGJ0buGWXGB9Oa/WeeRIYXlk3bEUsdqljgew5NcRrdl8KviHCINWh8L+ICPlAm8qSVO2AfvqfypOSWjNI0pyTlFNpHzn8OfD37Gl4kRXVY7i46bdfvp7dgfcHZGfwyK958JfDr4HSIr+HfC3gm+GPlkhhguSf+BHcTXL67+yh8GdULNb6Lf6UX5JsdQkA/ASbx+lcLq37E/hkyF9D8c63YMOVNxbxzEfiuw0zM+mLHwz4bsQBY+H9KtQOghso0x+S1qRpHGu1FVB6AAV8g/wDDLXxZ0jjw38aLmMD7oMt1bf8AoDsKU/CT9rLTDiy+K8N4o6b9XmYn8JIjQB9f8ev60jsqLuO4j2BP8q+QP+Ea/bSsziDxTa3OP+nm0bP/AH3GKgn0v9tHBE0OmXn++umtn8wKAPrW91i2t0JMN+WH9yxmf+S1xfiPx81irFE1iMDuNLRP1mkUfnXzhNoH7XEwIn8H+G589TJZaU2fzqqPBf7VMjZHgbwhEfX+y9G/+JNAHpHir44mzDLFrmsxSYPyHUNAtv8A0OWRv/Ha8a8Z/HXxFdmSKy8Sa/5h+6sXiaNyfwtLRP0auqtvBn7XagCG28OWA/6ZWekx4/FY81ox/D/9sG8TZJ46srFT2S+jiA/79RUAfMWuQfEbxremabTPFWsHPyApd3f5F9xqxp3wW+LF8A0Xw98RxrjO+4sWgUD6ybRX0wvwD/aS1Mf8Tj41yxI33ki1e9f9AFFLF+xtq+qSeb4p+K17enOSq2byE/8AApJT/KgD5sk+D3iaxJ/4SDVvCXh/HUX/AIhtd4/7Zxu7/htzWbfeH/BelQn7X46GrXAyPJ0fTpWjJ95Z/LGPcK1fZ+gfsa/DCxIk1PUvEWqOOqtcpCh/BEB/8er0jwt8BfhB4cdJNO8C6TJKnSS8Vrps+uZS2D9KAPjb9hm38cQ/GewvPD1heNokyPDrE5hP2fyNpIDORjcHClQDnPtmv0VHTmo7aCG2gSC3ijhiQYREUKqj0AHAqSgAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooADXxb4P0HTfEvx0bRtWiaWzudUvBKqOUY7TIw+YcjkCvtI18W+EY9bl+OTx+HLm0ttVbU7z7PLdIWiU5lzuA56ZH1rz8dbmhdX1PtOEnJUcW4y5Xyb9tHr8j0P4u+FdR+E9jZeJPA/iXV7K0e5W3ms5bkyoGILKQG4K/KQQQe3NetfBbxlN458DQaxdwJDeRyvbXIT7jOuPmX0BBBx25FfPfibXPEPivxxbeD/iprMmh21rcbSLa1QRrKeFdiTypB4fkDPTrj6f8E+GdJ8I+HoNE0WJktoiWLO255GPJdj3J/wD1cUYZ81VuGke3n6Cz6KpYClTxNpVm7qSWjj/i05unf/Pxz45/FDxd4E8dDTdKubO4s5LNLny7q2DFCWcEAqVOPlHXn3rsLPUvjS1nDcDSPBd2ksauAl1PE2CM9wRXjf7XYH/CyoMnAOkx5P8AwOSvWbXxX8VLTw3E8HwztrgJaKYni1hG3AIMHZjJ+g5qY1H7Wabdl21N8Rg6ccvwtSlTp80lrzNRvt3cTqfh5r/ifVrvVrDxV4fg0e8sWiKCG4MyTI4Yhg2OmVIpnxH+JPhfwLGi6vcvLeyLuis7dQ0rD+8ckBV9yR7Zrd8IXVxf+E9Hv7tt9zc2MEszbcZdkBbjtyTxXyPoxPjD9oKEa7++W71txLHJyCkbNtj+mEC49K1rVpUoRUdW+55uV5ZQx+IrVKq5YU1dqPWy6Xu7Ozf4HvOj/ED4g+IbRL/Q/hg62Mg3RS32qJAZFPQhSuce/Spf+Fna7p2t6bo/ib4fajpU2o3cdrDcLdJNbFnYD74HYHOOpr05QABgYrzvxV8VPBWla2fDuuQ3wvkkiYW7WLP85IaMgjIznBBzwa0mnBXlP8jkw86eLqOFLCJr+658y8/iaf3fcei1xHxo8cjwH4Nk1OBYZdQmkEFnFLkqznkkgEHAUEn8B3rtIXMkKyGN4ywzsfGR7HFeHW89t8SfjrPd3LwyeG/CiNFEsjDy57hsgnB4IyD+Ea+tVXm1G0d2YZThYVKrq1lenTXNLz7L5vT7zpfgH8Sp/HumX0OqrbQ6tZSZdIFKq8LfdYAknggqefT1r0+vjyKdvhD8bmkt5fN0uObBKPuEtlKenHUr/NPevr+3miuLeOeCRZIpFDo6nIZSMgj2xWeEqucXGW6OziPLqeGrRrYdfuqiuvLuv1+dj5Z/ae1jWtO+IkmnWOuatBZvZRStAl7IE3MXyQM8dBx0r6d0K3gtNHtILaFIY1iXCoMDoK+VP2rj/wAXXP8A2DoP5vX1jp3/AB4W/wD1yX+QqMN/GqHbnyUcswVuqd/PSJPRRRXcfIBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAy4lSGB5pCQiAs2FJOB7Dk18ofDjR9bsPjpb65e6FrFvpv9pXUn2iSwlCBXEm0n5eAdw/OvrKuf8AiH4s03wN4N1DxVrEV1LYaeivOtsgeTBYLwCQDyw71hWoe0cXfY9fLc1eBp1aajf2is9dlr/mef8A7TPgE+JfDKa9pdm82r6aMFIkLPcQE/MmBySpO4f8CHern7PHiPW7zwynh7xNpmqWmoaeoSCa6tJEFxCPu/MwxuXoR1IwfWtvwT8T9B8UeJJPDQstX0fWVsU1COz1O2EbzWzEASoVZlZckA85B7cGk8S/EzTtG+IEfgaHw/r+r61Jp39pLHYQxMnkbyhYs8q8hhjHuKPYWq+0T9RPNZTwCwVWPMk7xfVeXp/XY8W/aj0fWNb+IccukaPqd/FFpyQSSQWcrorh5CVyFwTgjp616jo3xUs7XSbO2n8F+OBLFAkb40VyMhQDg59q7i218TeEn8Qvo+rwbIJJmsJIALvKZzHsDEFyVwADg5HPNcXpfxj0/UPFV/4Zi8GeMU1LTDb/ANoRtaQH7Ks+PLd9sxyuDk7ckAHjipjh3Gcpxlv5HRWzmnXwtLDVaV1T29636Gr4B8Y6l4r8Q38SeG9T0bR7K3QRtqFsYZZ5WY9AeAqqvTn73bivL/i18J/Emm+Nj458CRfanNyL17VMeZDMDksoPDqx5K9eT1HT6JFc34+8ZaZ4OtdPe+t7y8utTvUsbCys4w81zOwJCruKqBhSSzEAAdaqdBVI8s3r3McLnE8FiHVw8EotWcXqmut/Xf8A4Bx2j/GjTls0j8T+HPEWi6ioxNEdMlkQt32sBnH1Arx/xtZa14/+MA8QeHfDWuSae81oBJPZNEAI9oZiW4A4PU19OeE9cbXrK4nl0bVdHmt7hreW21CJUkDBVO5SjMrKQwwykg8+lZXjP4ieGfCXirw14a1m5kjv/Edw1vZBVBVWGMFzn5QWZVHXJP1NRUw8qiUZy09DpwedUMDUlVw9G0mmtZXSv2Vr9O5U+NPiLUdB8E3aaHZX15q92hhtVtbZ5Wjzw0h2g42jJGe+K5L4ZfBjwVL4I0yfxBo/2/U5ovMuXklmTazc7NuRjbwvTqDXsrnCFgpYgZwOprmPhh440j4heFI/Emhw3sNlJNLCou41Ry0bFW4DNxkHvWkqMZT5panFRzSrh8L7CheDbu5J2b6JadEeQ/Hz4TaBpnha1vvBmhvb30VwBJb2qyzNcRtwePm5U4PbjNdh+zbrOry+Dl8O6/pupWV5pnyW7XVrJGJYP4cFhglc7cegFdl8QfGuh+CNLt73WGuJJLy5S0sbO1iMtxdzv92KNB1Y+5AHciqHhj4h6Zq3iyXwlf6Zqvh/X0thdx2OpxoGngzgyRPG7o4B4IDZHPFRHDqFTnjp5G9bO6mIwP1SuuZp3Um9UeD/ALSWja1rfxOmutI0TVb63SzihMsFlKyb1LZAIXBxkdK9Tt/i7cxWsUY+GvjZmRAp/wBA4yB65rofHfxQ8LeCfF/h7w14hkurafX3aO0udgNujBlXEjbsrksoBxjnqOa29H8TWOqeKdb8OQQ3SXeii3Ny8igRt5yF02EEk8A5yBilHDyjKUoy38jWtndKvh6VCtR5lTVl7zXbt6HNfCvxB4i8Va3rmraxomoaHZxLBb2FndIykj52eQ5ABYkqOOAABXoNFFbwi4qzdzx8VWjWqucI8q0sl0srBRRRVnOFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFeaftQ6XqWtfAbxTpWj2F1qF/c2yJBbW0RkkkPmocBRyeAT+Fel0UAedfC34caXoV3beL7y51fUvEVxpMFk1xqcoL20AVWMCIqqEXcOeM5HJ61578UtDvZv2m7fXLqy8aw6IPCRsm1Dw9b3BcTm4LCMvEpONvJHTO2voeigDG8E3YvfC1jMtnqdogj8tI9RhMVyVQ7AzoeVLBd2DzgjNeb/DrR9Wtf2mfidrNzpd7Bpt/a6YlndyW7LFOY4drhGIw2CcHFew0UAFeb/H3RPDfiLw7YaV4o0PX72ze88yO+0WCSS402VUYrOBGCwHVcgNyRkdx6RRQB5d+zcnjWHwfqNr4uutVvbeDU5Y9FutWhMV7PZALseZT8wJO7G7DY6jpXnXxW8C+PPiJF481+zt7Ww8t4rbQ4r2xmF8FsCZUkgYMAvnStJglTldvtj6WooA534d6zqWu+A9J1fWtLu9K1Oa0Vr20uIGjkimAw42kZxuBI9QRXkH7L2p6l4Q+GWmeFNY8H+LYdVfVJwUfRp1iRZbgkSNKV2KoVtxJPb1r6BooA8i/aD8O63deIfAPjbSNMudXi8Lau1xfWFqu+eSCRQrSRp/Gybc7Ryc8VnrYal47/aJ8MeMtO0nVdP8AD/hjTblJLzULOS0a8nnUqIo45AHKqDksRjORXttFAHk3xW8D2vjn4j6fpGs6Xc3GiXPhnUbWe5WElIJnntWiIfGFkHlsy/7v55f7NOi+ONG8R+Nbfx1DJJeQPYWNvqPlsI9RhghdUnDH7zFSu70Oc85r22igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/9k=" alt="Regal Pet Salon" style="width:200px;height:auto;display:block;margin:0 auto 8px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.15));">
   </div>
 
   <div class="card" style="margin-top:10px;">
@@ -257,7 +237,10 @@ select.text-input{cursor:pointer;}
 
     <!-- STAFF TAB -->
     <div id="tab-staff">
-      <div class="section-title" style="font-size:16px;">Today's Status</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="section-title" style="font-size:16px;margin-bottom:0;">Today's Status</div>
+        <button class="btn btn-sm btn-outline" onclick="mgrTab('week')" style="font-size:12px;">📋 View/Edit All Shifts</button>
+      </div>
       <div id="mgr-staff-list"><div class="loading"><span class="spinner"></span>Loading…</div></div>
     </div>
 
@@ -334,6 +317,9 @@ const db = {
   async getEntries(filter='') { return sbFetch('time_entries?order=clock_in.desc'+filter); },
   async addEntry(e) { return sbFetch('time_entries', {method:'POST', body:JSON.stringify(e)}); },
   async updateEntry(id, data) { return sbFetch('time_entries?id=eq.'+id, {method:'PATCH', body:JSON.stringify(data)}); },
+  async getBreaks(filter='') { return sbFetch('breaks?order=break_start.desc'+filter); },
+  async addBreak(b) { return sbFetch('breaks', {method:'POST', body:JSON.stringify(b)}); },
+  async updateBreak(id, data) { return sbFetch('breaks?id=eq.'+id, {method:'PATCH', body:JSON.stringify(data)}); },
 };
 
 // ===================== STATE =====================
@@ -634,19 +620,26 @@ async function refreshStaffActions() {
     const today = entries.filter(e => isSameDay(e.clock_in, nowMs()));
     const last = today.length > 0 ? today[0] : null;
     const isClockedIn = last && !last.clock_out;
-    const onBreak = last && last.personal_break && !last.break_end;
-    if (isClockedIn && !onBreak) {
-      badge.innerHTML = '<span class="status-badge status-in">● Clocked In</span>';
-      actions.innerHTML = `<div class="action-row">
-        <button class="btn btn-red" onclick="doClockOut(false)">🏠 Clock Out</button>
-        <button class="btn btn-outline" onclick="doClockOut(true)">☕ Personal Break</button>
-      </div>`;
-    } else if (onBreak) {
+
+    // Check for an open break (break_start set, no break_end)
+    const breaks = await db.getBreaks('&staff_id=eq.' + currentUser.id);
+    const todayBreaks = breaks.filter(b => isSameDay(b.break_start, nowMs()));
+    const openBreak = todayBreaks.find(b => !b.break_end);
+
+    if (openBreak) {
+      const elapsed = fmtDuration(nowMs() - openBreak.break_start);
       badge.innerHTML = '<span class="status-badge status-break">⏸ On Break</span>';
-      actions.innerHTML = `<button class="btn btn-green" onclick="doClockBackIn()">▶ Clock Back In</button>`;
+      actions.innerHTML = `<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">Break started at ${fmtTime(openBreak.break_start)} (${elapsed} ago)</div>
+        <button class="btn btn-green" onclick="doClockBackIn('${openBreak.id}')">▶ Clock Back In</button>`;
+    } else if (isClockedIn) {
+      badge.innerHTML = '<span class="status-badge status-in">● Clocked In</span>';
+      actions.innerHTML = \`<div class="action-row">
+        <button class="btn btn-red" onclick="doClockOut()">🏠 Clock Out</button>
+        <button class="btn btn-outline" onclick="doStartBreak('${last.id}')">☕ Personal Break</button>
+      </div>\`;
     } else {
       badge.innerHTML = '<span class="status-badge status-out">○ Not Clocked In</span>';
-      actions.innerHTML = `<button class="btn btn-gold" onclick="doClockIn()">🐾 Clock In</button>`;
+      actions.innerHTML = \`<button class="btn btn-gold" onclick="doClockIn()">🐾 Clock In</button>\`;
     }
   } catch(e) {
     actions.innerHTML = '<div class="error-msg">Could not load status.</div>';
@@ -654,28 +647,46 @@ async function refreshStaffActions() {
 }
 async function updateStaffStats() {
   try {
-    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
+    const [entries, breaks] = await Promise.all([
+      db.getEntries('&staff_id=eq.' + currentUser.id),
+      db.getBreaks('&staff_id=eq.' + currentUser.id)
+    ]);
     const now = nowMs();
-    const today = entries.filter(e => isSameDay(e.clock_in, now));
-    let todayMs = 0;
-    today.forEach(e => {
-      const end = e.clock_out || now;
-      todayMs += end - e.clock_in;
-      if (e.personal_break && e.break_start) todayMs -= ((e.break_end || now) - e.break_start);
-    });
+
+    // Today's worked time
+    const todayEntries = entries.filter(e => isSameDay(e.clock_in, now));
+    const firstEntry = todayEntries.sort((a,b) => a.clock_in - b.clock_in)[0];
+    const lastEntry = todayEntries.sort((a,b) => b.clock_in - a.clock_in)[0];
+    const dayStart = firstEntry ? firstEntry.clock_in : null;
+    const dayEnd = lastEntry ? (lastEntry.clock_out || now) : now;
+    let todayMs = dayStart ? (dayEnd - dayStart) : 0;
+
+    // Subtract today's breaks
+    const todayBreaks = breaks.filter(b => isSameDay(b.break_start, now));
+    todayBreaks.forEach(b => { todayMs -= ((b.break_end || now) - b.break_start); });
+    if (todayMs < 0) todayMs = 0;
+
     document.getElementById('stat-today').textContent = fmtDuration(todayMs);
+
+    // Week total
     const {start, end} = getWeekRange(0);
-    const week = entries.filter(e => e.clock_in >= start.getTime() && e.clock_in <= end.getTime());
+    // Group entries by day, calc day total = last clock_out - first clock_in - breaks that day
     let weekMs = 0;
-    week.forEach(e => {
-      const wend = e.clock_out || now;
-      weekMs += wend - e.clock_in;
-      if (e.personal_break && e.break_start) weekMs -= ((e.break_end || now) - e.break_start);
-    });
+    for (let i = 0; i < 5; i++) {
+      const day = new Date(start); day.setDate(start.getDate() + i);
+      const dayEnd2 = new Date(day); dayEnd2.setHours(23,59,59,999);
+      const dayE = entries.filter(e => e.clock_in >= day.getTime() && e.clock_in <= dayEnd2.getTime());
+      if (!dayE.length) continue;
+      const dFirst = dayE.sort((a,b)=>a.clock_in-b.clock_in)[0];
+      const dLast = dayE.sort((a,b)=>b.clock_in-a.clock_in)[0];
+      let dMs = (dLast.clock_out || now) - dFirst.clock_in;
+      const dBreaks = breaks.filter(b => b.break_start >= day.getTime() && b.break_start <= dayEnd2.getTime());
+      dBreaks.forEach(b => { dMs -= ((b.break_end || now) - b.break_start); });
+      if (dMs > 0) weekMs += dMs;
+    }
     document.getElementById('stat-week').textContent = fmtDuration(weekMs);
-    const first = today.sort((a,b) => a.clock_in - b.clock_in)[0];
-    document.getElementById('stat-start').textContent = first ? fmtTime(first.clock_in) : '—';
-  } catch(e) {}
+    document.getElementById('stat-start').textContent = firstEntry ? fmtTime(firstEntry.clock_in) : '—';
+  } catch(e) { console.error(e); }
 }
 async function doClockIn() {
   showLoading('Clocking in…');
@@ -687,34 +698,38 @@ async function doClockIn() {
     await renderRecentShifts();
   } catch(e) { hideLoading(); alert('Error clocking in. Please try again.'); }
 }
-async function doClockOut(isBreak) {
-  showLoading(isBreak ? 'Starting break…' : 'Clocking out…');
+async function doClockOut() {
+  showLoading('Clocking out…');
   try {
     const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
     const today = entries.filter(e => isSameDay(e.clock_in, nowMs()) && !e.clock_out);
     const last = today.length > 0 ? today[0] : null;
     if (!last) { hideLoading(); return; }
-    if (isBreak) {
-      await db.updateEntry(last.id, {personal_break:true, break_start:nowMs()});
-    } else {
-      await db.updateEntry(last.id, {clock_out:nowMs()});
-    }
+    await db.updateEntry(last.id, {clock_out:nowMs()});
     hideLoading();
     await refreshStaffActions();
     await updateStaffStats();
     await renderRecentShifts();
   } catch(e) { hideLoading(); alert('Error. Please try again.'); }
 }
-async function doClockBackIn() {
+async function doStartBreak(entryId) {
+  showLoading('Starting break…');
+  try {
+    const now = nowMs();
+    // Record break as a separate breaks table entry
+    await db.addBreak({id:'b'+now, staff_id:currentUser.id, staff_name:currentUser.name, break_date:now, break_start:now, break_end:null});
+    // Mark the time entry as having a personal break
+    await db.updateEntry(entryId, {personal_break:true});
+    hideLoading();
+    await refreshStaffActions();
+  } catch(e) { hideLoading(); alert('Error starting break. Please try again.'); }
+}
+async function doClockBackIn(breakId) {
   showLoading('Clocking back in…');
   try {
-    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
-    const today = entries.filter(e => isSameDay(e.clock_in, nowMs()) && !e.clock_out);
-    const last = today.length > 0 ? today[0] : null;
-    if (!last) { hideLoading(); return; }
     const now = nowMs();
-    await db.updateEntry(last.id, {break_end:now, clock_out:now});
-    await db.addEntry({id:'e'+Date.now(), staff_id:currentUser.id, staff_name:currentUser.name, clock_in:now, clock_out:null, personal_break:false, break_start:null, break_end:null});
+    // Close the break record
+    await db.updateBreak(breakId, {break_end:now});
     hideLoading();
     await refreshStaffActions();
     await updateStaffStats();
@@ -787,18 +802,34 @@ async function renderWeekReport(offset) {
     const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
     if (!staff.length) { area.innerHTML = '<div class="no-data">No staff to show.</div>'; return; }
     const days = ['Mon','Tue','Wed','Thu','Fri'];
-    let html = '<table class="staff-table" style="min-width:320px;"><thead><tr><th>Name</th>' + days.map(d=>'<th>'+d+'</th>').join('') + '<th>Total</th></tr></thead><tbody>';
+    let html = '<table class="staff-table" style="min-width:420px;"><thead><tr><th>Name</th>' + days.map(d=>'<th>'+d+'</th>').join('') + '<th>Total</th></tr></thead><tbody>';
+    const allBreaksR = await db.getBreaks('');
+    const rangeBreaks = allBreaksR.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime());
     staff.forEach(s => {
       html += '<tr><td style="font-weight:800;white-space:nowrap;">' + s.name + '</td>';
       let totalMs = 0;
       for (let i = 0; i < 5; i++) {
         const day = new Date(start); day.setDate(start.getDate() + i);
         const dayEnd = new Date(day); dayEnd.setHours(23,59,59,999);
-        const dayEntries = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
+        const dayE = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
         let ms = 0;
-        dayEntries.forEach(e => { if(e.clock_out){ ms += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) ms -= (e.break_end||e.clock_out) - e.break_start; } });
+        if (dayE.length) {
+          const dFirst = dayE.sort((a,b)=>a.clock_in-b.clock_in)[0];
+          const dLast = dayE.sort((a,b)=>b.clock_in-a.clock_in)[0];
+          if (dLast.clock_out) {
+            ms = dLast.clock_out - dFirst.clock_in;
+            const dayBreaks = rangeBreaks.filter(b => b.staff_id===s.id && b.break_start>=day.getTime() && b.break_start<=dayEnd.getTime());
+            dayBreaks.forEach(b => { if(b.break_end) ms -= (b.break_end - b.break_start); });
+            if (ms < 0) ms = 0;
+          }
+        }
         totalMs += ms;
-        html += '<td style="font-size:11px;white-space:nowrap;">' + (ms>0 ? fmtDuration(ms) : '—') + '</td>';
+        // Find first entry id for this staff+day for editing
+        const firstEId = dayE.length ? dayE.sort((a,b)=>a.clock_in-b.clock_in)[0].id : null;
+        const firstBreakId = dayBreaks.length ? dayBreaks[0].id : null;
+        const cellClick = firstEId ? `onclick="openEditModal('${s.id}','${s.name}',${day.getTime()},${dayEnd.getTime()})" style="cursor:pointer;" title="Click to edit"` : '';
+        const editIcon = firstEId ? ' <span style="color:var(--gold);font-size:10px;">✏️</span>' : '';
+        html += '<td style="font-size:11px;white-space:nowrap;" '+cellClick+'>' + (ms>0 ? fmtDuration(ms) : (firstEId ? '—' : '—')) + editIcon + '</td>';
       }
       html += '<td style="font-weight:800;white-space:nowrap;">' + (totalMs>0 ? fmtDuration(totalMs) : '—') + '</td></tr>';
     });
@@ -815,6 +846,7 @@ async function exportCSV() {
     const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
     const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
     let csv = 'Staff Name,' + days.join(',') + ',Weekly Total\n';
+    const allBreaksW = await db.getBreaks('');
     staff.forEach(s => {
       let row = s.name;
       let totalMs = 0;
@@ -822,8 +854,14 @@ async function exportCSV() {
         const day = new Date(start); day.setDate(start.getDate() + i);
         const dayEnd = new Date(day); dayEnd.setHours(23,59,59,999);
         const dayE = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
-        let ms = 0;
-        dayE.forEach(e => { if(e.clock_out){ ms += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) ms -= (e.break_end||e.clock_out) - e.break_start; } });
+        if (!dayE.length) { row += ',0:00'; continue; }
+        const dFirst = dayE.sort((a,b)=>a.clock_in-b.clock_in)[0];
+        const dLast = dayE.sort((a,b)=>b.clock_in-a.clock_in)[0];
+        if (!dLast.clock_out) { row += ',0:00'; continue; }
+        let ms = dLast.clock_out - dFirst.clock_in;
+        const dayBreaks = allBreaksW.filter(b => b.staff_id===s.id && b.break_start>=day.getTime() && b.break_start<=dayEnd.getTime());
+        dayBreaks.forEach(b => { if(b.break_end) ms -= (b.break_end - b.break_start); });
+        if (ms < 0) ms = 0;
         totalMs += ms;
         const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
         row += ',' + (ms>0 ? h+':'+m.toString().padStart(2,'0') : '0:00');
@@ -833,15 +871,52 @@ async function exportCSV() {
       csv += row + '\n';
     });
     csv += '\nDetailed Time Log (' + fmtDate(start) + ' to ' + fmtDate(end) + ')\n';
-    csv += 'Staff Name,Date,Clock In,Clock Out,Personal Break,Hours Worked\n';
-    const allE = entries.filter(e => e.clock_out).sort((a,b) => a.clock_in - b.clock_in);
-    allE.forEach(e => {
-      const ms = (e.clock_out - e.clock_in) - (e.personal_break&&e.break_start ? (e.break_end||e.clock_out) - e.break_start : 0);
-      const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
-      const d = new Date(e.clock_in).toLocaleDateString('en-NZ');
-      csv += `${e.staff_name},${d},${fmtTime(e.clock_in)},${fmtTime(e.clock_out)},${e.personal_break?'Yes':'No'},${h}:${m.toString().padStart(2,'0')}\n`;
+    // Detailed log - one row per person per day
+    csv += 'Staff Name,Date,First Clock In,Last Clock Out,Total Break Time,Break Sessions,Hours Worked\n';
+    const allBreaks = await db.getBreaks('');
+    const allBreaksInRange = allBreaks.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime());
+
+    // Group by staff + day
+    const dayMap = {};
+    entries.forEach(e => {
+      const dayKey = e.staff_id + '_' + new Date(e.clock_in).toDateString();
+      if (!dayMap[dayKey]) dayMap[dayKey] = {staffName:e.staff_name, staffId:e.staff_id, entries:[], breaks:[]};
+      dayMap[dayKey].entries.push(e);
     });
-    hideLoading();
+    allBreaksInRange.forEach(b => {
+      const dayKey = b.staff_id + '_' + new Date(b.break_start).toDateString();
+      if (dayMap[dayKey]) dayMap[dayKey].breaks.push(b);
+    });
+
+    Object.values(dayMap).sort((a,b) => {
+      const ae = a.entries.sort((x,y)=>x.clock_in-y.clock_in)[0];
+      const be = b.entries.sort((x,y)=>x.clock_in-y.clock_in)[0];
+      return ae.clock_in - be.clock_in;
+    }).forEach(day => {
+      const sortedE = day.entries.sort((a,b)=>a.clock_in-b.clock_in);
+      const firstIn = sortedE[0].clock_in;
+      const lastE = day.entries.sort((a,b)=>b.clock_in-a.clock_in)[0];
+      const lastOut = lastE.clock_out;
+      if (!lastOut) return; // skip if still clocked in
+      const d = new Date(firstIn).toLocaleDateString('en-NZ');
+      let totalBreakMs = 0;
+      const breakSessions = [];
+      day.breaks.forEach(b => {
+        if (b.break_end) {
+          const bms = b.break_end - b.break_start;
+          totalBreakMs += bms;
+          const bh2 = Math.floor(bms/3600000), bm2 = Math.floor((bms%3600000)/60000);
+          breakSessions.push(fmtTime(b.break_start)+'-'+fmtTime(b.break_end)+'('+bh2+':'+bm2.toString().padStart(2,'0')+')');
+        }
+      });
+      const workedMs = (lastOut - firstIn) - totalBreakMs;
+      const wh = Math.floor(workedMs/3600000), wm = Math.floor((workedMs%3600000)/60000);
+      const tbh = Math.floor(totalBreakMs/3600000), tbm = Math.floor((totalBreakMs%3600000)/60000);
+      const breakDurStr = totalBreakMs > 0 ? tbh+':'+tbm.toString().padStart(2,'0') : '0:00';
+      const breakDetail = breakSessions.length ? breakSessions.join(' | ') : 'None';
+      csv += `${day.staffName},${d},${fmtTime(firstIn)},${fmtTime(lastOut)},${breakDurStr},"${breakDetail}",${wh}:${wm.toString().padStart(2,'0')}\n`;
+    });
+        hideLoading();
     const blob = new Blob([csv], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -915,6 +990,178 @@ function doLogout() {
   showScreen('screen-login');
 }
 
+
+// ===================== MANAGER EDIT ENTRY =====================
+let editState = {};
+
+async function openEditModal(staffId, staffName, dayStart, dayEnd) {
+  editState = { staffId, staffName, dayStart, dayEnd, entryIds:[], breakIds:[] };
+  showLoading('Loading shift data…');
+  try {
+    const [entries, breaks] = await Promise.all([
+      db.getEntries('&staff_id=eq.'+staffId),
+      db.getBreaks('&staff_id=eq.'+staffId)
+    ]);
+    const dayEntries = entries.filter(e => e.clock_in >= dayStart && e.clock_in <= dayEnd).sort((a,b)=>a.clock_in-b.clock_in);
+    const dayBreaks = breaks.filter(b => b.break_start >= dayStart && b.break_start <= dayEnd).sort((a,b)=>a.break_start-b.break_start);
+
+    if (!dayEntries.length) { hideLoading(); alert('No entries found for this day.'); return; }
+
+    editState.entryIds = dayEntries.map(e=>e.id);
+    editState.breakIds = dayBreaks.map(b=>b.id);
+
+    const firstIn = dayEntries[0].clock_in;
+    const lastEntry = dayEntries[dayEntries.length-1];
+    const lastOut = lastEntry.clock_out;
+    const hasBreak = dayBreaks.length > 0;
+    const breakEntry = dayBreaks[0];
+
+    const dayDate = new Date(firstIn);
+    const dateStr = dayDate.toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+    document.getElementById('edit-staff-name').value = staffName;
+    document.getElementById('edit-date').value = dateStr;
+    document.getElementById('edit-modal-subtitle').textContent = 'Manager override — changes are saved immediately';
+    document.getElementById('edit-clock-in').value = toTimeInput(firstIn);
+    document.getElementById('edit-clock-out').value = lastOut ? toTimeInput(lastOut) : '';
+    document.getElementById('edit-error').textContent = '';
+
+    const breakSection = document.getElementById('edit-break-section');
+    if (hasBreak && breakEntry) {
+      breakSection.style.display = 'block';
+      document.getElementById('edit-break-start').value = breakEntry.break_start ? toTimeInput(breakEntry.break_start) : '';
+      document.getElementById('edit-break-end').value = breakEntry.break_end ? toTimeInput(breakEntry.break_end) : '';
+      editState.hasBreak = true;
+      editState.breakId = breakEntry.id;
+    } else if (dayEntries.some(e=>e.personal_break)) {
+      // Old-style break data
+      breakSection.style.display = 'block';
+      editState.hasBreak = true;
+      editState.breakId = null;
+      editState.oldStyleBreak = true;
+    } else {
+      breakSection.style.display = 'none';
+      editState.hasBreak = false;
+    }
+
+    editState.baseDate = dayDate;
+    updateEditCalc();
+
+    // Add live listeners
+    ['edit-clock-in','edit-clock-out','edit-break-start','edit-break-end'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.oninput = updateEditCalc; }
+    });
+
+    hideLoading();
+    document.getElementById('edit-modal').style.display = 'flex';
+  } catch(e) {
+    hideLoading();
+    alert('Could not load shift data. Please try again.');
+  }
+}
+
+function toTimeInput(ts) {
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+function timeInputToTs(timeStr, baseDate) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  const d = new Date(baseDate);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+}
+
+function updateEditCalc() {
+  const base = editState.baseDate;
+  if (!base) return;
+  const inTs = timeInputToTs(document.getElementById('edit-clock-in').value, base);
+  const outTs = timeInputToTs(document.getElementById('edit-clock-out').value, base);
+  const bsEl = document.getElementById('edit-break-start');
+  const beEl = document.getElementById('edit-break-end');
+  const bsTs = bsEl && bsEl.value ? timeInputToTs(bsEl.value, base) : null;
+  const beTs = beEl && beEl.value ? timeInputToTs(beEl.value, base) : null;
+
+  const calcEl = document.getElementById('edit-calc-hours');
+  const noteEl = document.getElementById('edit-calc-note');
+
+  if (!inTs || !outTs) { calcEl.textContent = '—'; noteEl.textContent = 'Enter clock in and out times'; return; }
+  if (outTs <= inTs) { calcEl.textContent = '⚠️ Invalid'; noteEl.textContent = 'Clock out must be after clock in'; return; }
+
+  let workedMs = outTs - inTs;
+  let breakMs = 0;
+  let noteStr = fmtTime(inTs) + ' → ' + fmtTime(outTs);
+
+  if (bsTs && beTs && beTs > bsTs) {
+    breakMs = beTs - bsTs;
+    workedMs -= breakMs;
+    noteStr += ' | Break: ' + fmtTime(bsTs) + '–' + fmtTime(beTs) + ' (' + fmtDuration(breakMs) + ')';
+  }
+
+  if (workedMs < 0) { calcEl.textContent = '⚠️ Invalid'; noteEl.textContent = 'Break time exceeds shift length'; return; }
+  calcEl.textContent = fmtDuration(workedMs);
+  noteEl.textContent = noteStr;
+}
+
+async function saveEditEntry() {
+  const base = editState.baseDate;
+  const err = document.getElementById('edit-error');
+  err.textContent = '';
+
+  const inTs = timeInputToTs(document.getElementById('edit-clock-in').value, base);
+  const outTs = timeInputToTs(document.getElementById('edit-clock-out').value, base);
+
+  if (!inTs) { err.textContent = 'Please enter a clock-in time.'; return; }
+  if (!outTs) { err.textContent = 'Please enter a clock-out time.'; return; }
+  if (outTs <= inTs) { err.textContent = 'Clock-out must be after clock-in.'; return; }
+
+  const bsEl = document.getElementById('edit-break-start');
+  const beEl = document.getElementById('edit-break-end');
+  const bsTs = bsEl && bsEl.value ? timeInputToTs(bsEl.value, base) : null;
+  const beTs = beEl && beEl.value ? timeInputToTs(beEl.value, base) : null;
+
+  if (editState.hasBreak && bsTs && beTs && beTs <= bsTs) {
+    err.textContent = 'Break end must be after break start.'; return;
+  }
+
+  showLoading('Saving changes…');
+  try {
+    // Update the first entry with new clock-in, last entry with new clock-out
+    const ids = editState.entryIds;
+    if (ids.length === 1) {
+      await db.updateEntry(ids[0], {clock_in:inTs, clock_out:outTs});
+    } else {
+      // Multi-entry day (old break style) — update first clock-in and last clock-out
+      await db.updateEntry(ids[0], {clock_in:inTs});
+      await db.updateEntry(ids[ids.length-1], {clock_out:outTs});
+    }
+
+    // Update break if exists
+    if (editState.hasBreak && editState.breakId && bsTs && beTs) {
+      await db.updateBreak(editState.breakId, {break_start:bsTs, break_end:beTs});
+    } else if (editState.hasBreak && editState.oldStyleBreak && bsTs && beTs) {
+      // Old style - create a proper break record
+      await db.addBreak({id:'b'+Date.now(), staff_id:editState.staffId, staff_name:editState.staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
+    }
+
+    hideLoading();
+    closeEditModal();
+    // Refresh the week report
+    renderWeekReport(reportWeekOffset);
+  } catch(e) {
+    hideLoading();
+    err.textContent = 'Error saving. Please try again.';
+    console.error(e);
+  }
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  editState = {};
+}
+
 // ===================== INIT =====================
 window.addEventListener('DOMContentLoaded', async () => {
   // Init all screens hidden except login
@@ -932,5 +1179,56 @@ window.addEventListener('DOMContentLoaded', async () => {
   }, 30000);
 });
 </script>
+
+<!-- EDIT ENTRY MODAL -->
+<div class="overlay" id="edit-modal" style="display:none;">
+  <div class="overlay-card" style="max-width:400px;width:100%;">
+    <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-bottom:4px;">✏️ Edit Time Entry</div>
+    <div style="font-size:13px;color:#888;margin-bottom:16px;" id="edit-modal-subtitle"></div>
+
+    <div class="field-label">Staff Member</div>
+    <input class="text-input" id="edit-staff-name" readonly style="background:#f5f5f5;color:#888;">
+
+    <div class="field-label">Date</div>
+    <input class="text-input" id="edit-date" readonly style="background:#f5f5f5;color:#888;">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <div class="field-label">Clock In</div>
+        <input class="text-input" id="edit-clock-in" type="time">
+      </div>
+      <div>
+        <div class="field-label">Clock Out</div>
+        <input class="text-input" id="edit-clock-out" type="time">
+      </div>
+    </div>
+
+    <div id="edit-break-section" style="display:none;">
+      <div class="divider"></div>
+      <div style="font-weight:800;font-size:13px;color:#856404;margin-bottom:8px;">☕ Personal Break</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <div class="field-label">Break Start</div>
+          <input class="text-input" id="edit-break-start" type="time">
+        </div>
+        <div>
+          <div class="field-label">Break End</div>
+          <input class="text-input" id="edit-break-end" type="time">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="background:#fff9e6;border:1px solid var(--gold);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:800;color:#856404;margin-bottom:4px;">CALCULATED HOURS WORKED</div>
+      <div style="font-size:22px;font-weight:800;color:#333;" id="edit-calc-hours">—</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px;" id="edit-calc-note"></div>
+    </div>
+
+    <div class="error-msg" id="edit-error"></div>
+    <button class="btn btn-gold" onclick="saveEditEntry()">💾 Save Changes</button>
+    <button class="btn btn-gray" onclick="closeEditModal()" style="margin-top:8px;">Cancel</button>
+  </div>
+</div>
 </body>
 </html>

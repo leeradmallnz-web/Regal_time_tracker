@@ -123,6 +123,7 @@ select.text-input{cursor:pointer;}
 
 input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;cursor:pointer;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -291,42 +292,69 @@ const SUPABASE_URL = 'https://etonoiijjskgucjkpeua.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_V97eLvMIbw_0Xi66eVOGZA_jVNoSzI7';
 const MANAGER_PIN  = '0000';
 
-// ===================== SUPABASE API =====================
-async function sbFetch(path, opts={}) {
-  try {
-    const headers = {
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': opts.prefer !== undefined ? opts.prefer : 'return=representation',
-    };
-    if (opts.headers) Object.assign(headers, opts.headers);
-    const fetchOpts = {method: opts.method || 'GET', headers};
-    if (opts.body) fetchOpts.body = opts.body;
-    const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, fetchOpts);
-    if (!res.ok) {
-      const e = await res.text();
-      console.error('Supabase error:', res.status, e);
-      throw new Error('DB error: ' + res.status);
-    }
-    const text = await res.text();
-    return text ? JSON.parse(text) : [];
-  } catch(err) {
-    console.error('sbFetch failed:', path, err);
-    throw err;
-  }
-}
+// ===================== SUPABASE CLIENT =====================
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const db = {
-  async getStaff() { return sbFetch('staff?order=name.asc'); },
-  async addStaff(s) { return sbFetch('staff', {method:'POST', body:JSON.stringify(s)}); },
-  async deleteStaff(id) { return sbFetch('staff?id=eq.'+id, {method:'DELETE', prefer:''}); },
-  async getEntries(filter='') { return sbFetch('time_entries?order=clock_in.desc'+filter); },
-  async getEntriesInRange(start, end) { return sbFetch('time_entries?order=clock_in.asc&clock_in=gte.'+start+'&clock_in=lte.'+end); },
-  async addEntry(e) { return sbFetch('time_entries', {method:'POST', body:JSON.stringify(e)}); },
-  async updateEntry(id, data) { return sbFetch('time_entries?id=eq.'+id, {method:'PATCH', body:JSON.stringify(data)}); },
-  async getBreaks(filter='') { return sbFetch('breaks?order=break_start.desc'+filter); },
-  async addBreak(b) { return sbFetch('breaks', {method:'POST', body:JSON.stringify(b)}); },
-  async updateBreak(id, data) { return sbFetch('breaks?id=eq.'+id, {method:'PATCH', body:JSON.stringify(data)}); },
+  async getStaff() {
+    const {data,error} = await _sb.from('staff').select('*').order('name');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+  async addStaff(s) {
+    const {error} = await _sb.from('staff').insert(s);
+    if (error) throw new Error(error.message);
+  },
+  async deleteStaff(id) {
+    const {error} = await _sb.from('staff').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+  async getEntries(filter='') {
+    // filter is like '&staff_id=eq.X' - parse it for the client
+    let q = _sb.from('time_entries').select('*').order('clock_in', {ascending:false});
+    const parts = filter.replace(/^&/,'').split('&').filter(Boolean);
+    for (const p of parts) {
+      const [key, val] = p.split('=');
+      if (!key || !val) continue;
+      if (val.startsWith('eq.')) q = q.eq(key, val.slice(3));
+      else if (val.startsWith('gte.')) q = q.gte(key, val.slice(4));
+      else if (val.startsWith('lte.')) q = q.lte(key, val.slice(4));
+      else if (val.startsWith('not.is.')) q = q.not(key, 'is', null);
+      else if (val === 'null') q = q.is(key, null);
+      else if (val.startsWith('limit')) q = q.limit(parseInt(val.split('.')[1]||10));
+    }
+    const {data,error} = await q;
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+  async addEntry(e) {
+    const {error} = await _sb.from('time_entries').insert(e);
+    if (error) throw new Error(error.message);
+  },
+  async updateEntry(id, data) {
+    const {error} = await _sb.from('time_entries').update(data).eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+  async getBreaks(filter='') {
+    let q = _sb.from('breaks').select('*').order('break_start', {ascending:false});
+    const parts = filter.replace(/^&/,'').split('&').filter(Boolean);
+    for (const p of parts) {
+      const [key, val] = p.split('=');
+      if (!key || !val) continue;
+      if (val.startsWith('eq.')) q = q.eq(key, val.slice(3));
+    }
+    const {data,error} = await q;
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+  async addBreak(b) {
+    const {error} = await _sb.from('breaks').insert(b);
+    if (error) throw new Error(error.message);
+  },
+  async updateBreak(id, data) {
+    const {error} = await _sb.from('breaks').update(data).eq('id', id);
+    if (error) throw new Error(error.message);
+  },
 };
 
 // ===================== STATE =====================

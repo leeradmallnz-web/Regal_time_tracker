@@ -938,6 +938,9 @@ async function doClockIn() {
   } catch(e) { hideLoading(); alert('Error clocking in. Please try again.'); }
 }
 async function doClockOut() {
+  // Speak immediately on button tap - before any async work
+  const nameToSay = currentUser ? currentUser.name : '';
+  speak('Goodbye ' + nameToSay + ', see you tomorrow! Have a wonderful evening!');
   showLoading('Clocking out…');
   try {
     const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
@@ -946,7 +949,6 @@ async function doClockOut() {
     if (!last) { hideLoading(); return; }
     await db.updateEntry(last.id, {clock_out:nowMs()});
     hideLoading();
-    speak('Goodbye ' + currentUser.name + ', see you tomorrow! Have a wonderful evening!');
     await refreshStaffActions();
     await updateStaffStats();
     await renderRecentShifts();
@@ -1412,14 +1414,29 @@ function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const msg = new SpeechSynthesisUtterance(text);
-    msg.rate = 0.95;
+    msg.rate = 0.92;
     msg.pitch = 1.05;
     msg.volume = 1.0;
-    // Prefer a friendly English voice
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Karen') || v.name.includes('Moira') || v.name.includes('Tessa') || v.name.includes('Daniel'));
-    if (preferred) msg.voice = preferred;
-    window.speechSynthesis.speak(msg);
+    msg.lang = 'en-AU';
+    // iOS needs voices loaded first - try immediately then retry
+    function trySpeak() {
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v =>
+        v.name.includes('Samantha') || v.name.includes('Karen') ||
+        v.name.includes('Moira') || v.name.includes('Tessa') ||
+        v.name.includes('Daniel') || (v.lang && v.lang.startsWith('en'))
+      );
+      if (preferred) msg.voice = preferred;
+      window.speechSynthesis.speak(msg);
+    }
+    // On iOS voices may not be loaded yet
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.addEventListener('voiceschanged', trySpeak, {once: true});
+      // Fallback in case voiceschanged never fires
+      setTimeout(trySpeak, 300);
+    } else {
+      trySpeak();
+    }
   } catch(e) {
     console.log('Speech not available:', e);
   }

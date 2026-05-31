@@ -123,7 +123,8 @@ select.text-input{cursor:pointer;}
 
 input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;cursor:pointer;}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+
 </head>
 <body>
 
@@ -293,67 +294,66 @@ const SUPABASE_KEY = 'sb_publishable_V97eLvMIbw_0Xi66eVOGZA_jVNoSzI7';
 const MANAGER_PIN  = '0000';
 
 // ===================== SUPABASE CLIENT =====================
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const _sbc = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function _check(error) { if (error) throw new Error(error.message || JSON.stringify(error)); }
+
+async function _applyFilter(q, filter) {
+  const parts = (filter||'').replace(/^&/,'').split('&').filter(Boolean);
+  for (const p of parts) {
+    const eqIdx = p.indexOf('=');
+    if (eqIdx < 0) continue;
+    const key = p.slice(0, eqIdx);
+    const val = p.slice(eqIdx + 1);
+    if (val.startsWith('eq.')) q = q.eq(key, val.slice(3));
+    else if (val.startsWith('gte.')) q = q.gte(key, Number(val.slice(4)));
+    else if (val.startsWith('lte.')) q = q.lte(key, Number(val.slice(4)));
+    else if (val.startsWith('not.is.')) q = q.not(key, 'is', null);
+    else if (val === 'null') q = q.is(key, null);
+  }
+  return q;
+}
 
 const db = {
   async getStaff() {
-    const {data,error} = await _sb.from('staff').select('*').order('name');
-    if (error) throw new Error(error.message);
-    return data || [];
+    const {data,error} = await _sbc.from('staff').select('*').order('name');
+    _check(error); return data||[];
   },
   async addStaff(s) {
-    const {error} = await _sb.from('staff').insert(s);
-    if (error) throw new Error(error.message);
+    const {error} = await _sbc.from('staff').insert(s);
+    _check(error);
   },
   async deleteStaff(id) {
-    const {error} = await _sb.from('staff').delete().eq('id', id);
-    if (error) throw new Error(error.message);
+    const {error} = await _sbc.from('staff').delete().eq('id', id);
+    _check(error);
   },
   async getEntries(filter='') {
-    // filter is like '&staff_id=eq.X' - parse it for the client
-    let q = _sb.from('time_entries').select('*').order('clock_in', {ascending:false});
-    const parts = filter.replace(/^&/,'').split('&').filter(Boolean);
-    for (const p of parts) {
-      const [key, val] = p.split('=');
-      if (!key || !val) continue;
-      if (val.startsWith('eq.')) q = q.eq(key, val.slice(3));
-      else if (val.startsWith('gte.')) q = q.gte(key, val.slice(4));
-      else if (val.startsWith('lte.')) q = q.lte(key, val.slice(4));
-      else if (val.startsWith('not.is.')) q = q.not(key, 'is', null);
-      else if (val === 'null') q = q.is(key, null);
-      else if (val.startsWith('limit')) q = q.limit(parseInt(val.split('.')[1]||10));
-    }
+    let q = _sbc.from('time_entries').select('*').order('clock_in', {ascending:false});
+    q = await _applyFilter(q, filter);
     const {data,error} = await q;
-    if (error) throw new Error(error.message);
-    return data || [];
+    _check(error); return data||[];
   },
   async addEntry(e) {
-    const {error} = await _sb.from('time_entries').insert(e);
-    if (error) throw new Error(error.message);
+    const {error} = await _sbc.from('time_entries').insert(e);
+    _check(error);
   },
   async updateEntry(id, data) {
-    const {error} = await _sb.from('time_entries').update(data).eq('id', id);
-    if (error) throw new Error(error.message);
+    const {error} = await _sbc.from('time_entries').update(data).eq('id', id);
+    _check(error);
   },
   async getBreaks(filter='') {
-    let q = _sb.from('breaks').select('*').order('break_start', {ascending:false});
-    const parts = filter.replace(/^&/,'').split('&').filter(Boolean);
-    for (const p of parts) {
-      const [key, val] = p.split('=');
-      if (!key || !val) continue;
-      if (val.startsWith('eq.')) q = q.eq(key, val.slice(3));
-    }
+    let q = _sbc.from('breaks').select('*').order('break_start', {ascending:false});
+    q = await _applyFilter(q, filter);
     const {data,error} = await q;
-    if (error) throw new Error(error.message);
-    return data || [];
+    _check(error); return data||[];
   },
   async addBreak(b) {
-    const {error} = await _sb.from('breaks').insert(b);
-    if (error) throw new Error(error.message);
+    const {error} = await _sbc.from('breaks').insert(b);
+    _check(error);
   },
   async updateBreak(id, data) {
-    const {error} = await _sb.from('breaks').update(data).eq('id', id);
-    if (error) throw new Error(error.message);
+    const {error} = await _sbc.from('breaks').update(data).eq('id', id);
+    _check(error);
   },
 };
 
@@ -656,8 +656,16 @@ async function showStaffDash() {
   const user = currentUser;
   document.getElementById('staff-welcome').textContent = 'Hi, ' + user.name + '! 🌟';
   document.getElementById('staff-avatar-display').innerHTML = DOG_AVATARS[user.avatar || 0].svg;
+  // Set greeting immediately
   setRandomGreeting('staff-greeting-text', user.name);
+  // Start clock immediately - direct update first
+  const nowD = new Date();
+  const clockEl = document.getElementById('staff-clock');
+  if (clockEl) clockEl.textContent = nowD.getHours().toString().padStart(2,'0') + ':' + nowD.getMinutes().toString().padStart(2,'0');
+  const dateEl = document.getElementById('staff-date');
+  if (dateEl) dateEl.textContent = nowD.toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
   startClock('staff-clock', 'staff-date');
+  // Load data async - each independently so one failure doesn't block others
   try { await refreshStaffActions(); } catch(e) { console.error('Actions error:', e); }
   try { await updateStaffStats(); } catch(e) { console.error('Stats error:', e); }
   try { await renderRecentShifts(); } catch(e) { console.error('Shifts error:', e); }

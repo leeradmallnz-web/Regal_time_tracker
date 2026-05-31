@@ -293,22 +293,28 @@ const MANAGER_PIN  = '0000';
 
 // ===================== SUPABASE API =====================
 async function sbFetch(path, opts={}) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
-    headers: {
+  try {
+    const headers = {
       'apikey': SUPABASE_KEY,
       'Authorization': 'Bearer ' + SUPABASE_KEY,
       'Content-Type': 'application/json',
-      'Prefer': opts.prefer || 'return=representation',
-      ...opts.headers
-    },
-    ...opts
-  });
-  if (!res.ok) {
-    const e = await res.text();
-    throw new Error(e);
+      'Prefer': opts.prefer !== undefined ? opts.prefer : 'return=representation',
+    };
+    if (opts.headers) Object.assign(headers, opts.headers);
+    const fetchOpts = {method: opts.method || 'GET', headers};
+    if (opts.body) fetchOpts.body = opts.body;
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, fetchOpts);
+    if (!res.ok) {
+      const e = await res.text();
+      console.error('Supabase error:', res.status, e);
+      throw new Error('DB error: ' + res.status);
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : [];
+  } catch(err) {
+    console.error('sbFetch failed:', path, err);
+    throw err;
   }
-  const text = await res.text();
-  return text ? JSON.parse(text) : [];
 }
 const db = {
   async getStaff() { return sbFetch('staff?order=name.asc'); },
@@ -520,21 +526,25 @@ function startClock(clockId, dateId) {
 async function initLogin() {
   document.getElementById('login-greeting-text').textContent = randomGreeting();
   buildPad('login');
-  showLoading('Loading staff list…');
+  const sel = document.getElementById('login-name-select');
+  sel.innerHTML = '<option value="">— Loading staff… —</option>';
   try {
     staffCache = await db.getStaff();
+    sel.innerHTML = '<option value="">— Select your name —</option><option value="__manager__">Manager</option>';
+    staffCache.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.name;
+      sel.appendChild(o);
+    });
+    if (!staffCache.length) {
+      sel.innerHTML = '<option value="">— No staff yet — Register below —</option><option value="__manager__">Manager</option>';
+    }
   } catch(e) {
-    staffCache = [];
+    console.error('Failed to load staff:', e);
+    sel.innerHTML = '<option value="">— Select your name —</option><option value="__manager__">Manager</option>';
+    document.getElementById('login-error').textContent = 'Could not load staff list. Check internet connection.';
   }
-  hideLoading();
-  const sel = document.getElementById('login-name-select');
-  sel.innerHTML = '<option value="">— Select your name —</option><option value="__manager__">Manager</option>';
-  staffCache.forEach(s => {
-    const o = document.createElement('option');
-    o.value = s.id;
-    o.textContent = s.name;
-    sel.appendChild(o);
-  });
 }
 async function doLogin() {
   const sel = document.getElementById('login-name-select');
@@ -1168,6 +1178,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   document.getElementById('screen-login').style.display = 'flex';
   applySky('screen-login');
+  // Build pin pad FIRST synchronously before any async calls
+  buildPad('login');
+  buildPad('reg');
   initRegister();
   await initLogin();
   // Manager auto-refresh

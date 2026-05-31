@@ -646,7 +646,7 @@ async function showStaffDash() {
   const user = currentUser;
   document.getElementById('staff-welcome').textContent = 'Hi, ' + user.name + '! 🌟';
   document.getElementById('staff-avatar-display').innerHTML = DOG_AVATARS[user.avatar || 0].svg;
-  document.getElementById('staff-greeting-text').textContent = randomGreeting();
+  setRandomGreeting('staff-greeting-text', user.name);
   startClock('staff-clock', 'staff-date');
   await refreshStaffActions();
   await renderRecentShifts();
@@ -849,18 +849,17 @@ async function renderWeekReport(offset) {
         const dayEnd = new Date(day); dayEnd.setHours(23,59,59,999);
         const dayE = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
         let ms = 0;
+        const dayBreaks = rangeBreaks.filter(b => b.staff_id===s.id && b.break_start>=day.getTime() && b.break_start<=dayEnd.getTime());
         if (dayE.length) {
           const dFirst = dayE.sort((a,b)=>a.clock_in-b.clock_in)[0];
           const dLast = dayE.sort((a,b)=>b.clock_in-a.clock_in)[0];
           if (dLast.clock_out) {
             ms = dLast.clock_out - dFirst.clock_in;
-            const dayBreaks = rangeBreaks.filter(b => b.staff_id===s.id && b.break_start>=day.getTime() && b.break_start<=dayEnd.getTime());
             dayBreaks.forEach(b => { if(b.break_end) ms -= (b.break_end - b.break_start); });
             if (ms < 0) ms = 0;
           }
         }
         totalMs += ms;
-        // Find first entry id for this staff+day for editing
         const firstEId = dayE.length ? dayE.sort((a,b)=>a.clock_in-b.clock_in)[0].id : null;
         const firstBreakId = dayBreaks.length ? dayBreaks[0].id : null;
         const cellClick = firstEId ? `onclick="openEditModal('${s.id}','${s.name}',${day.getTime()},${dayEnd.getTime()})" style="cursor:pointer;" title="Click to edit"` : '';

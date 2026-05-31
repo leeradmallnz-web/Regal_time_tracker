@@ -939,9 +939,6 @@ async function doClockIn() {
   } catch(e) { hideLoading(); alert('Error clocking in. Please try again.'); }
 }
 async function doClockOut() {
-  // Speak immediately on button tap - before any async work
-  const nameToSay = currentUser ? currentUser.name : '';
-  speak('Goodbye ' + nameToSay + ', see you tomorrow! Have a wonderful evening!');
   showLoading('Clocking out…');
   try {
     const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
@@ -1230,33 +1227,30 @@ async function mgrAddStaff() {
 
 // ===================== LOGOUT =====================
 function doLogout() {
-  // Wait for any speech to finish before logging out
-  if (window.speechSynthesis && window.speechSynthesis.speaking) {
+  // Always say goodbye when signing out (covers both clock-out-then-signout and direct signout)
+  if (currentUser && !currentUser.isManager) {
+    const nameToSay = currentUser.name;
+    speak('Goodbye ' + nameToSay + ', see you next time! Have a wonderful day!');
+    // Wait for speech to finish before returning to login
     const btn = document.querySelector('[onclick="doLogout()"]');
     if (btn) btn.textContent = '⏳ One moment…';
     const check = setInterval(() => {
-      if (!window.speechSynthesis.speaking) {
+      if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
         clearInterval(check);
-        currentUser = null;
-        if (tickInterval) clearInterval(tickInterval);
-        initLogin();
-        showScreen('screen-login');
+        _performLogout();
       }
     }, 100);
-    // Safety timeout - log out after 5s regardless
-    setTimeout(() => {
-      clearInterval(check);
-      currentUser = null;
-      if (tickInterval) clearInterval(tickInterval);
-      initLogin();
-      showScreen('screen-login');
-    }, 5000);
+    setTimeout(() => { clearInterval(check); _performLogout(); }, 6000);
   } else {
-    currentUser = null;
-    if (tickInterval) clearInterval(tickInterval);
-    initLogin();
-    showScreen('screen-login');
+    _performLogout();
   }
+}
+
+function _performLogout() {
+  currentUser = null;
+  if (tickInterval) clearInterval(tickInterval);
+  initLogin();
+  showScreen('screen-login');
 }
 
 

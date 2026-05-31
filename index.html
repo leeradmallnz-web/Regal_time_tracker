@@ -763,6 +763,7 @@ async function doLogin() {
   if (name === '__manager__') {
     if (pin === MANAGER_PIN) {
       currentUser = {id:'manager', name:'Kerry', isManager:true};
+      speak('Hello Kerry, welcome to Regal Pet Salon!');
       await showManagerDash();
     } else {
       err.textContent = 'Incorrect code. Try again.';
@@ -780,6 +781,7 @@ async function doLogin() {
   currentUser = user;
   if (user.is_manager) {
     currentUser.isManager = true;
+    speak('Hello ' + user.name + ', welcome to Regal Pet Salon!');
     await showManagerDash();
   } else {
     await showStaffDash();
@@ -1257,7 +1259,7 @@ async function mgrAddStaff() {
 // ===================== LOGOUT =====================
 function doLogout() {
   // Always say goodbye when signing out (covers both clock-out-then-signout and direct signout)
-  if (currentUser && !currentUser.isManager) {
+  if (currentUser) {
     const nameToSay = currentUser.name;
     speak('Goodbye ' + nameToSay + ', see you next time! Have a wonderful day!');
     // Wait for speech to finish before returning to login

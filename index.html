@@ -407,6 +407,19 @@ function fmtDate(d) {
 function randomGreeting() {
   return GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
 }
+function setRandomGreeting(elId, name) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const raw = randomGreeting();
+  if (name) {
+    const r = Math.random();
+    if (r < 0.33) el.textContent = name + '! ' + raw;
+    else if (r < 0.66) el.textContent = 'Hey ' + name + ' — ' + raw.charAt(0).toLowerCase() + raw.slice(1);
+    else el.textContent = raw.replace('!', ', ' + name + '!') || raw + ' ' + name + '!';
+  } else {
+    el.textContent = raw;
+  }
+}
 function showLoading(msg='Loading…') {
   document.getElementById('loading-msg').textContent = msg;
   document.getElementById('loading-overlay').style.display = 'flex';

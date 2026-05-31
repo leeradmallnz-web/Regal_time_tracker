@@ -120,6 +120,8 @@ select.text-input{cursor:pointer;}
 /* OVERLAY */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
 .overlay-card{background:white;border-radius:20px;padding:24px;width:100%;max-width:360px;}
+
+input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -235,7 +237,10 @@ select.text-input{cursor:pointer;}
 
     <!-- STAFF TAB -->
     <div id="tab-staff">
-      <div class="section-title" style="font-size:16px;">Today's Status</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="section-title" style="font-size:16px;margin-bottom:0;">Today's Status</div>
+        <button class="btn btn-sm btn-outline" onclick="mgrTab('week')" style="font-size:12px;">📋 View/Edit All Shifts</button>
+      </div>
       <div id="mgr-staff-list"><div class="loading"><span class="spinner"></span>Loading…</div></div>
     </div>
 
@@ -312,6 +317,9 @@ const db = {
   async getEntries(filter='') { return sbFetch('time_entries?order=clock_in.desc'+filter); },
   async addEntry(e) { return sbFetch('time_entries', {method:'POST', body:JSON.stringify(e)}); },
   async updateEntry(id, data) { return sbFetch('time_entries?id=eq.'+id, {method:'PATCH', body:JSON.stringify(data)}); },
+  async getBreaks(filter='') { return sbFetch('breaks?order=break_start.desc'+filter); },
+  async addBreak(b) { return sbFetch('breaks', {method:'POST', body:JSON.stringify(b)}); },
+  async updateBreak(id, data) { return sbFetch('breaks?id=eq.'+id, {method:'PATCH', body:JSON.stringify(data)}); },
 };
 
 // ===================== STATE =====================
@@ -612,19 +620,26 @@ async function refreshStaffActions() {
     const today = entries.filter(e => isSameDay(e.clock_in, nowMs()));
     const last = today.length > 0 ? today[0] : null;
     const isClockedIn = last && !last.clock_out;
-    const onBreak = last && last.personal_break && !last.break_end;
-    if (isClockedIn && !onBreak) {
-      badge.innerHTML = '<span class="status-badge status-in">● Clocked In</span>';
-      actions.innerHTML = `<div class="action-row">
-        <button class="btn btn-red" onclick="doClockOut(false)">🏠 Clock Out</button>
-        <button class="btn btn-outline" onclick="doClockOut(true)">☕ Personal Break</button>
-      </div>`;
-    } else if (onBreak) {
+
+    // Check for an open break (break_start set, no break_end)
+    const breaks = await db.getBreaks('&staff_id=eq.' + currentUser.id);
+    const todayBreaks = breaks.filter(b => isSameDay(b.break_start, nowMs()));
+    const openBreak = todayBreaks.find(b => !b.break_end);
+
+    if (openBreak) {
+      const elapsed = fmtDuration(nowMs() - openBreak.break_start);
       badge.innerHTML = '<span class="status-badge status-break">⏸ On Break</span>';
-      actions.innerHTML = `<button class="btn btn-green" onclick="doClockBackIn()">▶ Clock Back In</button>`;
+      actions.innerHTML = `<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">Break started at ${fmtTime(openBreak.break_start)} (${elapsed} ago)</div>
+        <button class="btn btn-green" onclick="doClockBackIn('${openBreak.id}')">▶ Clock Back In</button>`;
+    } else if (isClockedIn) {
+      badge.innerHTML = '<span class="status-badge status-in">● Clocked In</span>';
+      actions.innerHTML = \`<div class="action-row">
+        <button class="btn btn-red" onclick="doClockOut()">🏠 Clock Out</button>
+        <button class="btn btn-outline" onclick="doStartBreak('${last.id}')">☕ Personal Break</button>
+      </div>\`;
     } else {
       badge.innerHTML = '<span class="status-badge status-out">○ Not Clocked In</span>';
-      actions.innerHTML = `<button class="btn btn-gold" onclick="doClockIn()">🐾 Clock In</button>`;
+      actions.innerHTML = \`<button class="btn btn-gold" onclick="doClockIn()">🐾 Clock In</button>\`;
     }
   } catch(e) {
     actions.innerHTML = '<div class="error-msg">Could not load status.</div>';
@@ -632,28 +647,46 @@ async function refreshStaffActions() {
 }
 async function updateStaffStats() {
   try {
-    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
+    const [entries, breaks] = await Promise.all([
+      db.getEntries('&staff_id=eq.' + currentUser.id),
+      db.getBreaks('&staff_id=eq.' + currentUser.id)
+    ]);
     const now = nowMs();
-    const today = entries.filter(e => isSameDay(e.clock_in, now));
-    let todayMs = 0;
-    today.forEach(e => {
-      const end = e.clock_out || now;
-      todayMs += end - e.clock_in;
-      if (e.personal_break && e.break_start) todayMs -= ((e.break_end || now) - e.break_start);
-    });
+
+    // Today's worked time
+    const todayEntries = entries.filter(e => isSameDay(e.clock_in, now));
+    const firstEntry = todayEntries.sort((a,b) => a.clock_in - b.clock_in)[0];
+    const lastEntry = todayEntries.sort((a,b) => b.clock_in - a.clock_in)[0];
+    const dayStart = firstEntry ? firstEntry.clock_in : null;
+    const dayEnd = lastEntry ? (lastEntry.clock_out || now) : now;
+    let todayMs = dayStart ? (dayEnd - dayStart) : 0;
+
+    // Subtract today's breaks
+    const todayBreaks = breaks.filter(b => isSameDay(b.break_start, now));
+    todayBreaks.forEach(b => { todayMs -= ((b.break_end || now) - b.break_start); });
+    if (todayMs < 0) todayMs = 0;
+
     document.getElementById('stat-today').textContent = fmtDuration(todayMs);
+
+    // Week total
     const {start, end} = getWeekRange(0);
-    const week = entries.filter(e => e.clock_in >= start.getTime() && e.clock_in <= end.getTime());
+    // Group entries by day, calc day total = last clock_out - first clock_in - breaks that day
     let weekMs = 0;
-    week.forEach(e => {
-      const wend = e.clock_out || now;
-      weekMs += wend - e.clock_in;
-      if (e.personal_break && e.break_start) weekMs -= ((e.break_end || now) - e.break_start);
-    });
+    for (let i = 0; i < 5; i++) {
+      const day = new Date(start); day.setDate(start.getDate() + i);
+      const dayEnd2 = new Date(day); dayEnd2.setHours(23,59,59,999);
+      const dayE = entries.filter(e => e.clock_in >= day.getTime() && e.clock_in <= dayEnd2.getTime());
+      if (!dayE.length) continue;
+      const dFirst = dayE.sort((a,b)=>a.clock_in-b.clock_in)[0];
+      const dLast = dayE.sort((a,b)=>b.clock_in-a.clock_in)[0];
+      let dMs = (dLast.clock_out || now) - dFirst.clock_in;
+      const dBreaks = breaks.filter(b => b.break_start >= day.getTime() && b.break_start <= dayEnd2.getTime());
+      dBreaks.forEach(b => { dMs -= ((b.break_end || now) - b.break_start); });
+      if (dMs > 0) weekMs += dMs;
+    }
     document.getElementById('stat-week').textContent = fmtDuration(weekMs);
-    const first = today.sort((a,b) => a.clock_in - b.clock_in)[0];
-    document.getElementById('stat-start').textContent = first ? fmtTime(first.clock_in) : '—';
-  } catch(e) {}
+    document.getElementById('stat-start').textContent = firstEntry ? fmtTime(firstEntry.clock_in) : '—';
+  } catch(e) { console.error(e); }
 }
 async function doClockIn() {
   showLoading('Clocking in…');
@@ -665,34 +698,38 @@ async function doClockIn() {
     await renderRecentShifts();
   } catch(e) { hideLoading(); alert('Error clocking in. Please try again.'); }
 }
-async function doClockOut(isBreak) {
-  showLoading(isBreak ? 'Starting break…' : 'Clocking out…');
+async function doClockOut() {
+  showLoading('Clocking out…');
   try {
     const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
     const today = entries.filter(e => isSameDay(e.clock_in, nowMs()) && !e.clock_out);
     const last = today.length > 0 ? today[0] : null;
     if (!last) { hideLoading(); return; }
-    if (isBreak) {
-      await db.updateEntry(last.id, {personal_break:true, break_start:nowMs()});
-    } else {
-      await db.updateEntry(last.id, {clock_out:nowMs()});
-    }
+    await db.updateEntry(last.id, {clock_out:nowMs()});
     hideLoading();
     await refreshStaffActions();
     await updateStaffStats();
     await renderRecentShifts();
   } catch(e) { hideLoading(); alert('Error. Please try again.'); }
 }
-async function doClockBackIn() {
+async function doStartBreak(entryId) {
+  showLoading('Starting break…');
+  try {
+    const now = nowMs();
+    // Record break as a separate breaks table entry
+    await db.addBreak({id:'b'+now, staff_id:currentUser.id, staff_name:currentUser.name, break_date:now, break_start:now, break_end:null});
+    // Mark the time entry as having a personal break
+    await db.updateEntry(entryId, {personal_break:true});
+    hideLoading();
+    await refreshStaffActions();
+  } catch(e) { hideLoading(); alert('Error starting break. Please try again.'); }
+}
+async function doClockBackIn(breakId) {
   showLoading('Clocking back in…');
   try {
-    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
-    const today = entries.filter(e => isSameDay(e.clock_in, nowMs()) && !e.clock_out);
-    const last = today.length > 0 ? today[0] : null;
-    if (!last) { hideLoading(); return; }
     const now = nowMs();
-    await db.updateEntry(last.id, {break_end:now, clock_out:now});
-    await db.addEntry({id:'e'+Date.now(), staff_id:currentUser.id, staff_name:currentUser.name, clock_in:now, clock_out:null, personal_break:false, break_start:null, break_end:null});
+    // Close the break record
+    await db.updateBreak(breakId, {break_end:now});
     hideLoading();
     await refreshStaffActions();
     await updateStaffStats();
@@ -765,18 +802,34 @@ async function renderWeekReport(offset) {
     const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
     if (!staff.length) { area.innerHTML = '<div class="no-data">No staff to show.</div>'; return; }
     const days = ['Mon','Tue','Wed','Thu','Fri'];
-    let html = '<table class="staff-table" style="min-width:320px;"><thead><tr><th>Name</th>' + days.map(d=>'<th>'+d+'</th>').join('') + '<th>Total</th></tr></thead><tbody>';
+    let html = '<table class="staff-table" style="min-width:420px;"><thead><tr><th>Name</th>' + days.map(d=>'<th>'+d+'</th>').join('') + '<th>Total</th></tr></thead><tbody>';
+    const allBreaksR = await db.getBreaks('');
+    const rangeBreaks = allBreaksR.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime());
     staff.forEach(s => {
       html += '<tr><td style="font-weight:800;white-space:nowrap;">' + s.name + '</td>';
       let totalMs = 0;
       for (let i = 0; i < 5; i++) {
         const day = new Date(start); day.setDate(start.getDate() + i);
         const dayEnd = new Date(day); dayEnd.setHours(23,59,59,999);
-        const dayEntries = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
+        const dayE = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
         let ms = 0;
-        dayEntries.forEach(e => { if(e.clock_out){ ms += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) ms -= (e.break_end||e.clock_out) - e.break_start; } });
+        if (dayE.length) {
+          const dFirst = dayE.sort((a,b)=>a.clock_in-b.clock_in)[0];
+          const dLast = dayE.sort((a,b)=>b.clock_in-a.clock_in)[0];
+          if (dLast.clock_out) {
+            ms = dLast.clock_out - dFirst.clock_in;
+            const dayBreaks = rangeBreaks.filter(b => b.staff_id===s.id && b.break_start>=day.getTime() && b.break_start<=dayEnd.getTime());
+            dayBreaks.forEach(b => { if(b.break_end) ms -= (b.break_end - b.break_start); });
+            if (ms < 0) ms = 0;
+          }
+        }
         totalMs += ms;
-        html += '<td style="font-size:11px;white-space:nowrap;">' + (ms>0 ? fmtDuration(ms) : '—') + '</td>';
+        // Find first entry id for this staff+day for editing
+        const firstEId = dayE.length ? dayE.sort((a,b)=>a.clock_in-b.clock_in)[0].id : null;
+        const firstBreakId = dayBreaks.length ? dayBreaks[0].id : null;
+        const cellClick = firstEId ? `onclick="openEditModal('${s.id}','${s.name}',${day.getTime()},${dayEnd.getTime()})" style="cursor:pointer;" title="Click to edit"` : '';
+        const editIcon = firstEId ? ' <span style="color:var(--gold);font-size:10px;">✏️</span>' : '';
+        html += '<td style="font-size:11px;white-space:nowrap;" '+cellClick+'>' + (ms>0 ? fmtDuration(ms) : (firstEId ? '—' : '—')) + editIcon + '</td>';
       }
       html += '<td style="font-weight:800;white-space:nowrap;">' + (totalMs>0 ? fmtDuration(totalMs) : '—') + '</td></tr>';
     });
@@ -793,6 +846,7 @@ async function exportCSV() {
     const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
     const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
     let csv = 'Staff Name,' + days.join(',') + ',Weekly Total\n';
+    const allBreaksW = await db.getBreaks('');
     staff.forEach(s => {
       let row = s.name;
       let totalMs = 0;
@@ -800,8 +854,14 @@ async function exportCSV() {
         const day = new Date(start); day.setDate(start.getDate() + i);
         const dayEnd = new Date(day); dayEnd.setHours(23,59,59,999);
         const dayE = entries.filter(e => e.staff_id === s.id && e.clock_in >= day.getTime() && e.clock_in <= dayEnd.getTime());
-        let ms = 0;
-        dayE.forEach(e => { if(e.clock_out){ ms += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) ms -= (e.break_end||e.clock_out) - e.break_start; } });
+        if (!dayE.length) { row += ',0:00'; continue; }
+        const dFirst = dayE.sort((a,b)=>a.clock_in-b.clock_in)[0];
+        const dLast = dayE.sort((a,b)=>b.clock_in-a.clock_in)[0];
+        if (!dLast.clock_out) { row += ',0:00'; continue; }
+        let ms = dLast.clock_out - dFirst.clock_in;
+        const dayBreaks = allBreaksW.filter(b => b.staff_id===s.id && b.break_start>=day.getTime() && b.break_start<=dayEnd.getTime());
+        dayBreaks.forEach(b => { if(b.break_end) ms -= (b.break_end - b.break_start); });
+        if (ms < 0) ms = 0;
         totalMs += ms;
         const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
         row += ',' + (ms>0 ? h+':'+m.toString().padStart(2,'0') : '0:00');
@@ -811,15 +871,52 @@ async function exportCSV() {
       csv += row + '\n';
     });
     csv += '\nDetailed Time Log (' + fmtDate(start) + ' to ' + fmtDate(end) + ')\n';
-    csv += 'Staff Name,Date,Clock In,Clock Out,Personal Break,Hours Worked\n';
-    const allE = entries.filter(e => e.clock_out).sort((a,b) => a.clock_in - b.clock_in);
-    allE.forEach(e => {
-      const ms = (e.clock_out - e.clock_in) - (e.personal_break&&e.break_start ? (e.break_end||e.clock_out) - e.break_start : 0);
-      const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
-      const d = new Date(e.clock_in).toLocaleDateString('en-NZ');
-      csv += `${e.staff_name},${d},${fmtTime(e.clock_in)},${fmtTime(e.clock_out)},${e.personal_break?'Yes':'No'},${h}:${m.toString().padStart(2,'0')}\n`;
+    // Detailed log - one row per person per day
+    csv += 'Staff Name,Date,First Clock In,Last Clock Out,Total Break Time,Break Sessions,Hours Worked\n';
+    const allBreaks = await db.getBreaks('');
+    const allBreaksInRange = allBreaks.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime());
+
+    // Group by staff + day
+    const dayMap = {};
+    entries.forEach(e => {
+      const dayKey = e.staff_id + '_' + new Date(e.clock_in).toDateString();
+      if (!dayMap[dayKey]) dayMap[dayKey] = {staffName:e.staff_name, staffId:e.staff_id, entries:[], breaks:[]};
+      dayMap[dayKey].entries.push(e);
     });
-    hideLoading();
+    allBreaksInRange.forEach(b => {
+      const dayKey = b.staff_id + '_' + new Date(b.break_start).toDateString();
+      if (dayMap[dayKey]) dayMap[dayKey].breaks.push(b);
+    });
+
+    Object.values(dayMap).sort((a,b) => {
+      const ae = a.entries.sort((x,y)=>x.clock_in-y.clock_in)[0];
+      const be = b.entries.sort((x,y)=>x.clock_in-y.clock_in)[0];
+      return ae.clock_in - be.clock_in;
+    }).forEach(day => {
+      const sortedE = day.entries.sort((a,b)=>a.clock_in-b.clock_in);
+      const firstIn = sortedE[0].clock_in;
+      const lastE = day.entries.sort((a,b)=>b.clock_in-a.clock_in)[0];
+      const lastOut = lastE.clock_out;
+      if (!lastOut) return; // skip if still clocked in
+      const d = new Date(firstIn).toLocaleDateString('en-NZ');
+      let totalBreakMs = 0;
+      const breakSessions = [];
+      day.breaks.forEach(b => {
+        if (b.break_end) {
+          const bms = b.break_end - b.break_start;
+          totalBreakMs += bms;
+          const bh2 = Math.floor(bms/3600000), bm2 = Math.floor((bms%3600000)/60000);
+          breakSessions.push(fmtTime(b.break_start)+'-'+fmtTime(b.break_end)+'('+bh2+':'+bm2.toString().padStart(2,'0')+')');
+        }
+      });
+      const workedMs = (lastOut - firstIn) - totalBreakMs;
+      const wh = Math.floor(workedMs/3600000), wm = Math.floor((workedMs%3600000)/60000);
+      const tbh = Math.floor(totalBreakMs/3600000), tbm = Math.floor((totalBreakMs%3600000)/60000);
+      const breakDurStr = totalBreakMs > 0 ? tbh+':'+tbm.toString().padStart(2,'0') : '0:00';
+      const breakDetail = breakSessions.length ? breakSessions.join(' | ') : 'None';
+      csv += `${day.staffName},${d},${fmtTime(firstIn)},${fmtTime(lastOut)},${breakDurStr},"${breakDetail}",${wh}:${wm.toString().padStart(2,'0')}\n`;
+    });
+        hideLoading();
     const blob = new Blob([csv], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -893,6 +990,178 @@ function doLogout() {
   showScreen('screen-login');
 }
 
+
+// ===================== MANAGER EDIT ENTRY =====================
+let editState = {};
+
+async function openEditModal(staffId, staffName, dayStart, dayEnd) {
+  editState = { staffId, staffName, dayStart, dayEnd, entryIds:[], breakIds:[] };
+  showLoading('Loading shift data…');
+  try {
+    const [entries, breaks] = await Promise.all([
+      db.getEntries('&staff_id=eq.'+staffId),
+      db.getBreaks('&staff_id=eq.'+staffId)
+    ]);
+    const dayEntries = entries.filter(e => e.clock_in >= dayStart && e.clock_in <= dayEnd).sort((a,b)=>a.clock_in-b.clock_in);
+    const dayBreaks = breaks.filter(b => b.break_start >= dayStart && b.break_start <= dayEnd).sort((a,b)=>a.break_start-b.break_start);
+
+    if (!dayEntries.length) { hideLoading(); alert('No entries found for this day.'); return; }
+
+    editState.entryIds = dayEntries.map(e=>e.id);
+    editState.breakIds = dayBreaks.map(b=>b.id);
+
+    const firstIn = dayEntries[0].clock_in;
+    const lastEntry = dayEntries[dayEntries.length-1];
+    const lastOut = lastEntry.clock_out;
+    const hasBreak = dayBreaks.length > 0;
+    const breakEntry = dayBreaks[0];
+
+    const dayDate = new Date(firstIn);
+    const dateStr = dayDate.toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+    document.getElementById('edit-staff-name').value = staffName;
+    document.getElementById('edit-date').value = dateStr;
+    document.getElementById('edit-modal-subtitle').textContent = 'Manager override — changes are saved immediately';
+    document.getElementById('edit-clock-in').value = toTimeInput(firstIn);
+    document.getElementById('edit-clock-out').value = lastOut ? toTimeInput(lastOut) : '';
+    document.getElementById('edit-error').textContent = '';
+
+    const breakSection = document.getElementById('edit-break-section');
+    if (hasBreak && breakEntry) {
+      breakSection.style.display = 'block';
+      document.getElementById('edit-break-start').value = breakEntry.break_start ? toTimeInput(breakEntry.break_start) : '';
+      document.getElementById('edit-break-end').value = breakEntry.break_end ? toTimeInput(breakEntry.break_end) : '';
+      editState.hasBreak = true;
+      editState.breakId = breakEntry.id;
+    } else if (dayEntries.some(e=>e.personal_break)) {
+      // Old-style break data
+      breakSection.style.display = 'block';
+      editState.hasBreak = true;
+      editState.breakId = null;
+      editState.oldStyleBreak = true;
+    } else {
+      breakSection.style.display = 'none';
+      editState.hasBreak = false;
+    }
+
+    editState.baseDate = dayDate;
+    updateEditCalc();
+
+    // Add live listeners
+    ['edit-clock-in','edit-clock-out','edit-break-start','edit-break-end'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.oninput = updateEditCalc; }
+    });
+
+    hideLoading();
+    document.getElementById('edit-modal').style.display = 'flex';
+  } catch(e) {
+    hideLoading();
+    alert('Could not load shift data. Please try again.');
+  }
+}
+
+function toTimeInput(ts) {
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+function timeInputToTs(timeStr, baseDate) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  const d = new Date(baseDate);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+}
+
+function updateEditCalc() {
+  const base = editState.baseDate;
+  if (!base) return;
+  const inTs = timeInputToTs(document.getElementById('edit-clock-in').value, base);
+  const outTs = timeInputToTs(document.getElementById('edit-clock-out').value, base);
+  const bsEl = document.getElementById('edit-break-start');
+  const beEl = document.getElementById('edit-break-end');
+  const bsTs = bsEl && bsEl.value ? timeInputToTs(bsEl.value, base) : null;
+  const beTs = beEl && beEl.value ? timeInputToTs(beEl.value, base) : null;
+
+  const calcEl = document.getElementById('edit-calc-hours');
+  const noteEl = document.getElementById('edit-calc-note');
+
+  if (!inTs || !outTs) { calcEl.textContent = '—'; noteEl.textContent = 'Enter clock in and out times'; return; }
+  if (outTs <= inTs) { calcEl.textContent = '⚠️ Invalid'; noteEl.textContent = 'Clock out must be after clock in'; return; }
+
+  let workedMs = outTs - inTs;
+  let breakMs = 0;
+  let noteStr = fmtTime(inTs) + ' → ' + fmtTime(outTs);
+
+  if (bsTs && beTs && beTs > bsTs) {
+    breakMs = beTs - bsTs;
+    workedMs -= breakMs;
+    noteStr += ' | Break: ' + fmtTime(bsTs) + '–' + fmtTime(beTs) + ' (' + fmtDuration(breakMs) + ')';
+  }
+
+  if (workedMs < 0) { calcEl.textContent = '⚠️ Invalid'; noteEl.textContent = 'Break time exceeds shift length'; return; }
+  calcEl.textContent = fmtDuration(workedMs);
+  noteEl.textContent = noteStr;
+}
+
+async function saveEditEntry() {
+  const base = editState.baseDate;
+  const err = document.getElementById('edit-error');
+  err.textContent = '';
+
+  const inTs = timeInputToTs(document.getElementById('edit-clock-in').value, base);
+  const outTs = timeInputToTs(document.getElementById('edit-clock-out').value, base);
+
+  if (!inTs) { err.textContent = 'Please enter a clock-in time.'; return; }
+  if (!outTs) { err.textContent = 'Please enter a clock-out time.'; return; }
+  if (outTs <= inTs) { err.textContent = 'Clock-out must be after clock-in.'; return; }
+
+  const bsEl = document.getElementById('edit-break-start');
+  const beEl = document.getElementById('edit-break-end');
+  const bsTs = bsEl && bsEl.value ? timeInputToTs(bsEl.value, base) : null;
+  const beTs = beEl && beEl.value ? timeInputToTs(beEl.value, base) : null;
+
+  if (editState.hasBreak && bsTs && beTs && beTs <= bsTs) {
+    err.textContent = 'Break end must be after break start.'; return;
+  }
+
+  showLoading('Saving changes…');
+  try {
+    // Update the first entry with new clock-in, last entry with new clock-out
+    const ids = editState.entryIds;
+    if (ids.length === 1) {
+      await db.updateEntry(ids[0], {clock_in:inTs, clock_out:outTs});
+    } else {
+      // Multi-entry day (old break style) — update first clock-in and last clock-out
+      await db.updateEntry(ids[0], {clock_in:inTs});
+      await db.updateEntry(ids[ids.length-1], {clock_out:outTs});
+    }
+
+    // Update break if exists
+    if (editState.hasBreak && editState.breakId && bsTs && beTs) {
+      await db.updateBreak(editState.breakId, {break_start:bsTs, break_end:beTs});
+    } else if (editState.hasBreak && editState.oldStyleBreak && bsTs && beTs) {
+      // Old style - create a proper break record
+      await db.addBreak({id:'b'+Date.now(), staff_id:editState.staffId, staff_name:editState.staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
+    }
+
+    hideLoading();
+    closeEditModal();
+    // Refresh the week report
+    renderWeekReport(reportWeekOffset);
+  } catch(e) {
+    hideLoading();
+    err.textContent = 'Error saving. Please try again.';
+    console.error(e);
+  }
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  editState = {};
+}
+
 // ===================== INIT =====================
 window.addEventListener('DOMContentLoaded', async () => {
   // Init all screens hidden except login
@@ -910,5 +1179,56 @@ window.addEventListener('DOMContentLoaded', async () => {
   }, 30000);
 });
 </script>
+
+<!-- EDIT ENTRY MODAL -->
+<div class="overlay" id="edit-modal" style="display:none;">
+  <div class="overlay-card" style="max-width:400px;width:100%;">
+    <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-bottom:4px;">✏️ Edit Time Entry</div>
+    <div style="font-size:13px;color:#888;margin-bottom:16px;" id="edit-modal-subtitle"></div>
+
+    <div class="field-label">Staff Member</div>
+    <input class="text-input" id="edit-staff-name" readonly style="background:#f5f5f5;color:#888;">
+
+    <div class="field-label">Date</div>
+    <input class="text-input" id="edit-date" readonly style="background:#f5f5f5;color:#888;">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <div class="field-label">Clock In</div>
+        <input class="text-input" id="edit-clock-in" type="time">
+      </div>
+      <div>
+        <div class="field-label">Clock Out</div>
+        <input class="text-input" id="edit-clock-out" type="time">
+      </div>
+    </div>
+
+    <div id="edit-break-section" style="display:none;">
+      <div class="divider"></div>
+      <div style="font-weight:800;font-size:13px;color:#856404;margin-bottom:8px;">☕ Personal Break</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <div class="field-label">Break Start</div>
+          <input class="text-input" id="edit-break-start" type="time">
+        </div>
+        <div>
+          <div class="field-label">Break End</div>
+          <input class="text-input" id="edit-break-end" type="time">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="background:#fff9e6;border:1px solid var(--gold);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:800;color:#856404;margin-bottom:4px;">CALCULATED HOURS WORKED</div>
+      <div style="font-size:22px;font-weight:800;color:#333;" id="edit-calc-hours">—</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px;" id="edit-calc-note"></div>
+    </div>
+
+    <div class="error-msg" id="edit-error"></div>
+    <button class="btn btn-gold" onclick="saveEditEntry()">💾 Save Changes</button>
+    <button class="btn btn-gray" onclick="closeEditModal()" style="margin-top:8px;">Cancel</button>
+  </div>
+</div>
 </body>
 </html>

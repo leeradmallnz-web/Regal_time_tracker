@@ -640,21 +640,42 @@ async function doRegister() {
 async function showStaffDash() {
   showScreen('screen-staff');
   const user = currentUser;
+
+  // Set all static content IMMEDIATELY - no async needed
   document.getElementById('staff-welcome').textContent = 'Hi, ' + user.name + '! 🌟';
   document.getElementById('staff-avatar-display').innerHTML = DOG_AVATARS[user.avatar || 0].svg;
-  // Set greeting immediately
   setRandomGreeting('staff-greeting-text', user.name);
-  // Start clock immediately - direct update first
+
+  // Clock - set immediately then keep ticking
   const nowD = new Date();
   const clockEl = document.getElementById('staff-clock');
   if (clockEl) clockEl.textContent = nowD.getHours().toString().padStart(2,'0') + ':' + nowD.getMinutes().toString().padStart(2,'0');
   const dateEl = document.getElementById('staff-date');
   if (dateEl) dateEl.textContent = nowD.toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-  startClock('staff-clock', 'staff-date');
-  // Load data async - each independently so one failure doesn't block others
-  try { await refreshStaffActions(); } catch(e) { console.error('Actions error:', e); }
+  if (tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(() => {
+    const n = new Date();
+    const ce = document.getElementById('staff-clock');
+    if (ce) ce.textContent = n.getHours().toString().padStart(2,'0') + ':' + n.getMinutes().toString().padStart(2,'0');
+  }, 10000);
+
+  // Show a default Clock In button immediately while data loads
+  const actionsEl = document.getElementById('staff-actions');
+  if (actionsEl) actionsEl.innerHTML = '<button class="btn btn-gold" onclick="doClockIn()" style="margin-top:10px;">🐾 Clock In</button>';
+  const badgeEl = document.getElementById('staff-status-badge');
+  if (badgeEl) badgeEl.innerHTML = '<span class="status-badge status-out">○ Not Clocked In</span>';
+
+  // Now load live data from Supabase - each call independent
+  try { await refreshStaffActions(); } catch(e) {
+    console.error('Actions error:', e);
+    if (actionsEl) actionsEl.innerHTML = '<button class="btn btn-gold" onclick="doClockIn()" style="margin-top:10px;">🐾 Clock In</button>';
+  }
   try { await updateStaffStats(); } catch(e) { console.error('Stats error:', e); }
-  try { await renderRecentShifts(); } catch(e) { console.error('Shifts error:', e); }
+  try { await renderRecentShifts(); } catch(e) {
+    console.error('Shifts error:', e);
+    const el = document.getElementById('staff-recent');
+    if (el) el.innerHTML = '<div class="no-data">No shifts yet.</div>';
+  }
 }
 async function refreshStaffActions() {
   const badge = document.getElementById('staff-status-badge');

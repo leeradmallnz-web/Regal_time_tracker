@@ -1130,7 +1130,7 @@ async function exportPayHero() {
       const workedDecimal = (workedMs / 3600000).toFixed(2);
       const breakDecimal = totalBreakMs > 0 ? (totalBreakMs / 3600000).toFixed(2) : '0.00';
       const dateFormatted = new Date(firstIn).toLocaleDateString('en-NZ', {day:'2-digit', month:'2-digit', year:'numeric'});
-      csv += `${day.staffName},Grooming,${dateFormatted},,,${fmtTime(firstIn)},${fmtTime(lastOut)},${workedDecimal},${breakDecimal},1\n`;
+      csv += `${day.staffName},Salon Hours,${dateFormatted},,,${fmtTime(firstIn)},${fmtTime(lastOut)},${workedDecimal},${breakDecimal},1\n`;
     });
 
     hideLoading();

@@ -253,7 +253,10 @@ input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;c
         <button class="btn btn-sm btn-gray" onclick="changeWeek(1)">Next →</button>
       </div>
       <div id="week-report-area" class="scroll-area" style="overflow-x:auto;max-height:300px;"></div>
-      <button class="btn btn-green" onclick="exportCSV()" style="margin-top:12px;">⬇ Export CSV for Google Sheets</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+  <button class="btn btn-green" onclick="exportPayHero()">⬇ PayHero Import</button>
+  <button class="btn btn-blue" onclick="exportSummary()">⬇ Weekly Summary</button>
+</div>
     </div>
 
     <!-- SETTINGS TAB -->
@@ -1091,8 +1094,58 @@ async function renderWeekReport(offset) {
   }
 }
 function changeWeek(dir) { renderWeekReport(reportWeekOffset + dir); }
-async function exportCSV() {
-  showLoading('Preparing export…');
+async function exportPayHero() {
+  showLoading('Preparing PayHero export…');
+  const {start, end} = getWeekRange(reportWeekOffset);
+  try {
+    const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
+    let allBreaksW = []; try { allBreaksW = await db.getBreaks(''); } catch(be) {}
+    let csv = 'Employee,Work Name,Date,Employee Email,Notes,Start Time,End Time,Duration,Break Duration,Units\n';
+
+    // Group by staff + day
+    const dayMap = {};
+    entries.forEach(e => {
+      const dayKey = e.staff_id + '_' + new Date(e.clock_in).toDateString();
+      if (!dayMap[dayKey]) dayMap[dayKey] = {staffName:e.staff_name, staffId:e.staff_id, entries:[], breaks:[]};
+      dayMap[dayKey].entries.push(e);
+    });
+    allBreaksW.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime()).forEach(b => {
+      const dayKey = b.staff_id + '_' + new Date(b.break_start).toDateString();
+      if (dayMap[dayKey]) dayMap[dayKey].breaks.push(b);
+    });
+
+    Object.values(dayMap).sort((a,b) => {
+      const ae = a.entries.sort((x,y)=>x.clock_in-y.clock_in)[0];
+      const be2 = b.entries.sort((x,y)=>x.clock_in-y.clock_in)[0];
+      return ae.clock_in - be2.clock_in;
+    }).forEach(day => {
+      const sortedE = day.entries.sort((a,b)=>a.clock_in-b.clock_in);
+      const firstIn = sortedE[0].clock_in;
+      const lastE = day.entries.sort((a,b)=>b.clock_in-a.clock_in)[0];
+      const lastOut = lastE.clock_out;
+      if (!lastOut) return;
+      let totalBreakMs = 0;
+      day.breaks.forEach(b => { if(b.break_end) totalBreakMs += b.break_end - b.break_start; });
+      const workedMs = (lastOut - firstIn) - totalBreakMs;
+      const workedDecimal = (workedMs / 3600000).toFixed(2);
+      const breakDecimal = totalBreakMs > 0 ? (totalBreakMs / 3600000).toFixed(2) : '0.00';
+      const dateFormatted = new Date(firstIn).toLocaleDateString('en-NZ', {day:'2-digit', month:'2-digit', year:'numeric'});
+      csv += `${day.staffName},Grooming,${dateFormatted},,,${fmtTime(firstIn)},${fmtTime(lastOut)},${workedDecimal},${breakDecimal},1\n`;
+    });
+
+    hideLoading();
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'payhero-import-' + start.toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { hideLoading(); alert('Export failed: ' + (e.message||'unknown')); console.error(e); }
+}
+
+async function exportSummary() {
+  showLoading('Preparing weekly summary…');
   const {start, end} = getWeekRange(reportWeekOffset);
   try {
     const staff = await db.getStaff();
@@ -1124,60 +1177,11 @@ async function exportCSV() {
       csv += row + '\n';
     });
     csv += '\nDetailed Time Log (' + fmtDate(start) + ' to ' + fmtDate(end) + ')\n';
-    // PayHero import format - one row per person per day
-    csv += 'Employee,Work Name,Date,Employee Email,Notes,Start Time,End Time,Duration,Break Duration,Units\n';
-    const allBreaks = await db.getBreaks('');
-    const allBreaksInRange = allBreaks.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime());
-
-    // Group by staff + day
-    const dayMap = {};
-    entries.forEach(e => {
-      const dayKey = e.staff_id + '_' + new Date(e.clock_in).toDateString();
-      if (!dayMap[dayKey]) dayMap[dayKey] = {staffName:e.staff_name, staffId:e.staff_id, entries:[], breaks:[]};
-      dayMap[dayKey].entries.push(e);
-    });
-    allBreaksInRange.forEach(b => {
-      const dayKey = b.staff_id + '_' + new Date(b.break_start).toDateString();
-      if (dayMap[dayKey]) dayMap[dayKey].breaks.push(b);
-    });
-
-    Object.values(dayMap).sort((a,b) => {
-      const ae = a.entries.sort((x,y)=>x.clock_in-y.clock_in)[0];
-      const be = b.entries.sort((x,y)=>x.clock_in-y.clock_in)[0];
-      return ae.clock_in - be.clock_in;
-    }).forEach(day => {
-      const sortedE = day.entries.sort((a,b)=>a.clock_in-b.clock_in);
-      const firstIn = sortedE[0].clock_in;
-      const lastE = day.entries.sort((a,b)=>b.clock_in-a.clock_in)[0];
-      const lastOut = lastE.clock_out;
-      if (!lastOut) return; // skip if still clocked in
-      const d = new Date(firstIn).toLocaleDateString('en-NZ');
-      let totalBreakMs = 0;
-      const breakSessions = [];
-      day.breaks.forEach(b => {
-        if (b.break_end) {
-          const bms = b.break_end - b.break_start;
-          totalBreakMs += bms;
-          const bh2 = Math.floor(bms/3600000), bm2 = Math.floor((bms%3600000)/60000);
-          breakSessions.push(fmtTime(b.break_start)+'-'+fmtTime(b.break_end)+'('+bh2+':'+bm2.toString().padStart(2,'0')+')');
-        }
-      });
-      const workedMs = (lastOut - firstIn) - totalBreakMs;
-      const wh = Math.floor(workedMs/3600000), wm = Math.floor((workedMs%3600000)/60000);
-      const tbh = Math.floor(totalBreakMs/3600000), tbm = Math.floor((totalBreakMs%3600000)/60000);
-      const breakDurStr = totalBreakMs > 0 ? tbh+':'+tbm.toString().padStart(2,'0') : '0:00';
-      const breakDetail = breakSessions.length ? breakSessions.join(' | ') : 'None';
-      // Format for PayHero: Duration and Break Duration as decimal hours (e.g. 7.5)
-      const workedDecimal = (workedMs / 3600000).toFixed(2);
-      const breakDecimal = totalBreakMs > 0 ? (totalBreakMs / 3600000).toFixed(2) : '0.00';
-      const dateFormatted = new Date(firstIn).toLocaleDateString('en-NZ', {day:'2-digit', month:'2-digit', year:'numeric'});
-      csv += `${day.staffName},Grooming,${dateFormatted},,, ${fmtTime(firstIn)},${fmtTime(lastOut)},${workedDecimal},${breakDecimal},1\n`;
-    });
-        hideLoading();
+    hideLoading();
     const blob = new Blob([csv], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'regal-pet-salon-' + start.toISOString().slice(0,10) + '.csv';
+    a.href = url; a.download = 'weekly-summary-' + start.toISOString().slice(0,10) + '.csv';
     a.click();
     URL.revokeObjectURL(url);
   } catch(e) { hideLoading(); alert('Export failed: ' + (e.message||'unknown')); console.error(e); }

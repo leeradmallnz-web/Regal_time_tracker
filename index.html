@@ -214,7 +214,12 @@ input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;c
     <div class="section-title" style="font-size:16px;">My Recent Shifts</div>
     <div id="staff-recent" class="scroll-area" style="max-height:220px;"></div>
 
-    <button class="btn btn-gray" onclick="doLogout()" style="margin-top:14px;font-size:14px;">🚪 Sign Out</button>
+    <!-- AUTO RETURN BANNER -->
+    <div id="auto-return-banner" style="display:none;background:linear-gradient(135deg,#fff3cd,#ffe69c);border:2px solid var(--gold);border-radius:14px;padding:12px 16px;margin-top:14px;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="font-size:14px;font-weight:700;color:#856404;">↩ Returning to login in <span id="auto-return-count">10</span>s…</div>
+      <button class="btn btn-sm btn-gray" onclick="clearAutoReturn()" style="margin-top:0;padding:8px 14px;font-size:13px;">Stay</button>
+    </div>
+    <button class="btn btn-gray" onclick="doLogout()" style="margin-top:10px;font-size:14px;">🚪 Sign Out</button>
   </div>
 </div>
 
@@ -949,6 +954,7 @@ async function doClockIn() {
     await refreshStaffActions();
     await updateStaffStats();
     await renderRecentShifts();
+    startAutoReturn(10);
   } catch(e) { hideLoading(); alert('Error clocking in. Please try again.'); }
 }
 async function doClockOut() {
@@ -963,9 +969,11 @@ async function doClockOut() {
     await refreshStaffActions();
     await updateStaffStats();
     await renderRecentShifts();
+    startAutoReturn(10);
   } catch(e) { hideLoading(); alert('Error. Please try again.'); }
 }
 async function doStartBreak(entryId) {
+  clearAutoReturn();
   showLoading('Starting break…');
   try {
     const now = nowMs();
@@ -978,6 +986,7 @@ async function doStartBreak(entryId) {
   } catch(e) { hideLoading(); alert('Error starting break. Please try again.'); }
 }
 async function doClockBackIn(breakId) {
+  clearAutoReturn();
   showLoading('Clocking back in…');
   try {
     const now = nowMs();
@@ -1500,6 +1509,36 @@ function speak(text) {
 }
 function playBark() {
   // Kept for compatibility - now uses voice
+}
+
+
+// ===================== AUTO RETURN TO LOGIN =====================
+let autoReturnTimer = null;
+
+function startAutoReturn(seconds=10) {
+  clearAutoReturn();
+  let remaining = seconds;
+  // Show countdown banner
+  const banner = document.getElementById('auto-return-banner');
+  const countEl = document.getElementById('auto-return-count');
+  if (banner) {
+    banner.style.display = 'flex';
+    if (countEl) countEl.textContent = remaining;
+  }
+  autoReturnTimer = setInterval(() => {
+    remaining--;
+    if (countEl) countEl.textContent = remaining;
+    if (remaining <= 0) {
+      clearAutoReturn();
+      doLogout();
+    }
+  }, 1000);
+}
+
+function clearAutoReturn() {
+  if (autoReturnTimer) { clearInterval(autoReturnTimer); autoReturnTimer = null; }
+  const banner = document.getElementById('auto-return-banner');
+  if (banner) banner.style.display = 'none';
 }
 
 // ===================== INIT =====================

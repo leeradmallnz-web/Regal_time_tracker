@@ -122,6 +122,17 @@ select.text-input{cursor:pointer;}
 .overlay-card{background:white;border-radius:20px;padding:24px;width:100%;max-width:360px;}
 
 input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;cursor:pointer;}
+.break-option{flex:1;padding:14px 8px;border:2px solid #e0e0e0;border-radius:14px;font-family:var(--font-body);font-size:15px;font-weight:800;cursor:pointer;text-align:center;background:white;transition:all .15s;}
+.break-option:active{transform:scale(0.95);}
+.break-option.opt-10{border-color:#27AE60;color:#27AE60;}
+.break-option.opt-30{border-color:#2980B9;color:#2980B9;}
+.break-option.opt-custom{border-color:#E67E22;color:#E67E22;}
+.break-option.opt-10:hover{background:#d4edda;}
+.break-option.opt-30:hover{background:#d0e8f5;}
+.break-option.opt-custom:hover{background:#fdebd0;}
+.break-countdown{background:linear-gradient(135deg,#d4edda,#c3e6cb);border:2px solid #27AE60;border-radius:16px;padding:16px;text-align:center;margin-top:10px;}
+.break-countdown .time-left{font-family:var(--font-display);font-size:42px;font-weight:700;color:#155724;}
+.break-countdown .break-label{font-size:13px;font-weight:700;color:#1e8449;margin-bottom:4px;}
 </style>
 
 </head>
@@ -232,7 +243,10 @@ input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;c
         <div class="section-title" style="margin-bottom:0;">👑 Manager Console</div>
         <div class="text-sm fw700">Regal Pet Salon</div>
       </div>
-      <div class="clock-time" id="mgr-clock" style="font-size:26px;"></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <div class="clock-time" id="mgr-clock" style="font-size:26px;"></div>
+        <button class="btn btn-sm btn-gold" onclick="switchToMyTime()" style="margin-top:0;font-size:12px;padding:6px 12px;">🐾 My Time</button>
+      </div>
     </div>
 
     <div class="tab-bar">
@@ -257,6 +271,7 @@ input[type="time"].text-input{font-size:18px;font-weight:700;padding:14px 12px;c
         <span style="font-weight:800;font-size:14px;color:#333;" id="week-label">This Week</span>
         <button class="btn btn-sm btn-gray" onclick="changeWeek(1)">Next →</button>
       </div>
+      <button class="btn btn-outline" onclick="openAddEntryModal()" style="margin-bottom:12px;font-size:13px;">➕ Add / Edit Entry</button>
       <div id="week-report-area" class="scroll-area" style="overflow-x:auto;max-height:300px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
   <button class="btn btn-green" onclick="exportPayHero()">⬇ PayHero Import</button>
@@ -890,10 +905,10 @@ async function refreshStaffActions() {
     if (openBreak) {
       const elapsed = fmtDuration(nowMs() - openBreak.break_start);
       badge.innerHTML = '<span class="status-badge status-break">On Break</span>';
-      actions.innerHTML = '<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">Break since ' + fmtTime(openBreak.break_start) + ' (' + elapsed + ')</div><button class="btn btn-green" onclick="doClockBackIn(\'' + openBreak.id + '\')">Clock Back In</button>';
+      actions.innerHTML = '<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">On break since ' + fmtTime(openBreak.break_start) + ' (' + elapsed + ')</div><button class="btn btn-green" onclick="doClockBackIn(\'' + openBreak.id + '\')">Clock Back In</button>';
     } else if (isClockedIn) {
       badge.innerHTML = '<span class="status-badge status-in">Clocked In</span>';
-      actions.innerHTML = '<div class="action-row"><button class="btn btn-red" onclick="doClockOut()">Clock Out</button><button class="btn btn-outline" onclick="doStartBreak(\'' + last.id + '\')">Personal Break</button></div>';
+      actions.innerHTML = '<div class="action-row"><button class="btn btn-red" onclick="doClockOut()">Clock Out</button><button class="btn btn-outline" onclick="showBreakOptions(\'' + last.id + '\')">Personal Break</button></div>';
     } else {
       badge.innerHTML = '<span class="status-badge status-out">Not Clocked In</span>';
       actions.innerHTML = '<button class="btn btn-gold" onclick="doClockIn()">Clock In</button>';
@@ -972,7 +987,7 @@ async function doClockOut() {
     startAutoReturn(10);
   } catch(e) { hideLoading(); alert('Error. Please try again.'); }
 }
-async function doStartBreak(entryId) {
+async function showBreakOptions(entryId) {
   clearAutoReturn();
   showLoading('Starting break…');
   try {
@@ -1016,6 +1031,53 @@ async function showManagerDash() {
   showScreen('screen-manager');
   startClock('mgr-clock', null);
   mgrTab('staff');
+}
+
+async function switchToMyTime() {
+  // Show staff dashboard for the manager so they can log their own time
+  showScreen('screen-staff');
+  const user = currentUser;
+  speak('Hello ' + user.name + ', welcome to Regal Pet Salon!');
+
+  document.getElementById('staff-welcome').textContent = 'Hi, ' + user.name + '! 🌟';
+  document.getElementById('staff-avatar-display').innerHTML = DOG_AVATARS[user.avatar || 0].svg;
+  setRandomGreeting('staff-greeting-text', user.name);
+
+  const nowD = new Date();
+  const clockEl = document.getElementById('staff-clock');
+  if (clockEl) clockEl.textContent = nowD.getHours().toString().padStart(2,'0') + ':' + nowD.getMinutes().toString().padStart(2,'0');
+  const dateEl = document.getElementById('staff-date');
+  if (dateEl) dateEl.textContent = nowD.toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  if (tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(() => {
+    const n = new Date();
+    const ce = document.getElementById('staff-clock');
+    if (ce) ce.textContent = n.getHours().toString().padStart(2,'0') + ':' + n.getMinutes().toString().padStart(2,'0');
+  }, 10000);
+
+  const actionsEl = document.getElementById('staff-actions');
+  if (actionsEl) actionsEl.innerHTML = '<button class="btn btn-gold" onclick="doClockIn()" style="margin-top:10px;">🐾 Clock In</button>';
+  const badgeEl = document.getElementById('staff-status-badge');
+  if (badgeEl) badgeEl.innerHTML = '<span class="status-badge status-out">○ Not Clocked In</span>';
+
+  try { await refreshStaffActions(); } catch(e) { console.error('Actions error:', e); }
+  try { await updateStaffStats(); } catch(e) { console.error('Stats error:', e); }
+  try { await renderRecentShifts(); } catch(e) { console.error('Shifts error:', e); }
+
+  // Add a back to manager button
+  setTimeout(() => {
+    const signOutBtn = document.querySelector('#screen-staff .btn-gray');
+    if (signOutBtn && !document.getElementById('back-to-manager-btn')) {
+      const backBtn = document.createElement('button');
+      backBtn.id = 'back-to-manager-btn';
+      backBtn.className = 'btn btn-blue';
+      backBtn.style.marginTop = '10px';
+      backBtn.innerHTML = '👑 Back to Manager Console';
+      backBtn.onclick = () => { clearAutoReturn(); showManagerDash(); };
+      signOutBtn.parentNode.insertBefore(backBtn, signOutBtn);
+    }
+  }, 500);
 }
 function mgrTab(tab) {
   ['staff','week','settings'].forEach(t => {
@@ -1541,6 +1603,269 @@ function clearAutoReturn() {
   if (banner) banner.style.display = 'none';
 }
 
+
+// ===================== BREAK TIMER =====================
+let breakCountdownInterval = null;
+
+function showBreakOptions(entryId) {
+  const actions = document.getElementById('staff-actions');
+  if (!actions) return;
+  actions.innerHTML = `
+    <div style="width:100%;margin-top:10px;">
+      <div style="font-weight:800;font-size:14px;color:#555;margin-bottom:10px;text-align:center;">☕ Choose your break length:</div>
+      <div style="display:flex;gap:10px;">
+        <button class="break-option opt-10" onclick="startTimedBreak('${entryId}', 10)">⏱ 10 min</button>
+        <button class="break-option opt-30" onclick="startTimedBreak('${entryId}', 30)">⏱ 30 min</button>
+        <button class="break-option opt-custom" onclick="startCustomBreak('${entryId}')">✏️ Custom</button>
+      </div>
+      <button class="btn btn-gray" onclick="refreshStaffActions()" style="margin-top:10px;font-size:13px;">← Cancel</button>
+    </div>`;
+}
+
+async function startTimedBreak(entryId, minutes) {
+  showLoading('Starting break…');
+  try {
+    const now = nowMs();
+    const breakId = 'b' + now;
+    await db.addBreak({id: breakId, staff_id: currentUser.id, staff_name: currentUser.name, break_date: now, break_start: now, break_end: null});
+    await db.updateEntry(entryId, {personal_break: true});
+    hideLoading();
+    showBreakCountdown(breakId, minutes, now);
+  } catch(e) { hideLoading(); alert('Error starting break: ' + e.message); }
+}
+
+function showBreakCountdown(breakId, minutes, startTime) {
+  const badge = document.getElementById('staff-status-badge');
+  const actions = document.getElementById('staff-actions');
+  if (badge) badge.innerHTML = '<span class="status-badge status-break">⏸ On Break</span>';
+
+  const endTime = startTime + (minutes * 60000);
+
+  function updateCountdown() {
+    const remaining = Math.max(0, endTime - nowMs());
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    const display = mins.toString().padStart(2,'0') + ':' + secs.toString().padStart(2,'0');
+
+    if (actions) actions.innerHTML = `
+      <div class="break-countdown" style="width:100%;margin-top:10px;">
+        <div class="break-label">Break ends in</div>
+        <div class="time-left">${display}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">${minutes} min break • started ${fmtTime(startTime)}</div>
+      </div>
+      <button class="btn btn-green" onclick="endBreakEarly('${breakId}')" style="margin-top:8px;">▶ Clock Back In Early</button>`;
+
+    if (remaining <= 0) {
+      clearInterval(breakCountdownInterval);
+      endBreakAuto(breakId);
+    }
+  }
+
+  clearInterval(breakCountdownInterval);
+  updateCountdown();
+  breakCountdownInterval = setInterval(updateCountdown, 1000);
+}
+
+async function endBreakAuto(breakId) {
+  try {
+    const now = nowMs();
+    await db.updateBreak(breakId, {break_end: now});
+    await db.addEntry({id:'e'+now, staff_id:currentUser.id, staff_name:currentUser.name, clock_in:now, clock_out:null, personal_break:false, break_start:null, break_end:null});
+    speak('Break over ' + currentUser.name + '! Time to get back to work!');
+    await refreshStaffActions();
+    await updateStaffStats();
+  } catch(e) { console.error('Auto end break error:', e); }
+}
+
+async function endBreakEarly(breakId) {
+  clearInterval(breakCountdownInterval);
+  showLoading('Clocking back in…');
+  try {
+    const now = nowMs();
+    await db.updateBreak(breakId, {break_end: now});
+    await db.addEntry({id:'e'+now, staff_id:currentUser.id, staff_name:currentUser.name, clock_in:now, clock_out:null, personal_break:false, break_start:null, break_end:null});
+    hideLoading();
+    await refreshStaffActions();
+    await updateStaffStats();
+  } catch(e) { hideLoading(); alert('Error: ' + e.message); }
+}
+
+async function startCustomBreak(entryId) {
+  // Custom break = manual clock back in (existing doClockBackIn flow)
+  showLoading('Starting break…');
+  try {
+    const now = nowMs();
+    await db.addBreak({id:'b'+now, staff_id:currentUser.id, staff_name:currentUser.name, break_date:now, break_start:now, break_end:null});
+    await db.updateEntry(entryId, {personal_break:true});
+    hideLoading();
+    await refreshStaffActions();
+  } catch(e) { hideLoading(); alert('Error starting break: ' + e.message); }
+}
+
+
+// ===================== ADD/EDIT ENTRY MODAL =====================
+async function openAddEntryModal() {
+  // Populate staff dropdown
+  const sel = document.getElementById('ae-staff-select');
+  sel.innerHTML = '<option value="">— Select staff member —</option>';
+  try {
+    const staff = await db.getStaff();
+    staff.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.dataset.name = s.name;
+      o.textContent = s.name;
+      sel.appendChild(o);
+    });
+  } catch(e) { console.error(e); }
+
+  // Default date to today
+  const today = new Date();
+  document.getElementById('ae-date').value = today.toISOString().slice(0,10);
+  document.getElementById('ae-clock-in').value = '';
+  document.getElementById('ae-clock-out').value = '';
+  document.getElementById('ae-break-start').value = '';
+  document.getElementById('ae-break-end').value = '';
+  document.getElementById('ae-calc-hours').textContent = '—';
+  document.getElementById('ae-error').textContent = '';
+  document.getElementById('ae-existing-section').style.display = 'none';
+
+  // Live calc
+  ['ae-clock-in','ae-clock-out','ae-break-start','ae-break-end'].forEach(id => {
+    document.getElementById(id).oninput = calcAEHours;
+  });
+  document.getElementById('ae-date').onchange = onAEStaffChange;
+
+  document.getElementById('add-entry-modal').style.display = 'flex';
+}
+
+async function onAEStaffChange() {
+  const sel = document.getElementById('ae-staff-select');
+  const staffId = sel.value;
+  const dateVal = document.getElementById('ae-date').value;
+  if (!staffId || !dateVal) return;
+
+  const existingSection = document.getElementById('ae-existing-section');
+  const existingList = document.getElementById('ae-existing-list');
+
+  try {
+    const date = new Date(dateVal);
+    const dayStart = date.getTime();
+    const dayEnd = dayStart + 86400000;
+    const entries = await db.getEntries('&staff_id=eq.' + staffId + '&clock_in=gte.' + dayStart + '&clock_in=lte.' + dayEnd);
+
+    if (entries.length > 0) {
+      existingSection.style.display = 'block';
+      existingList.innerHTML = entries.map(e => {
+        const ms = e.clock_out ? (e.clock_out - e.clock_in) : 0;
+        return `<div class="shift-stat" style="margin-bottom:6px;">
+          <div>
+            <div style="font-weight:700;font-size:13px;">${fmtTime(e.clock_in)} → ${e.clock_out ? fmtTime(e.clock_out) : 'Still in'}</div>
+            <div style="font-size:11px;color:#aaa;">${fmtDuration(ms)} ${e.personal_break ? '• had break' : ''}</div>
+          </div>
+          <button class="btn btn-sm btn-gold" onclick="editExistingEntry('${e.id}', ${e.clock_in}, ${e.clock_out||0})" style="margin-top:0;font-size:11px;padding:6px 10px;">✏️ Edit</button>
+        </div>`;
+      }).join('');
+    } else {
+      existingSection.style.display = 'none';
+    }
+  } catch(e) { console.error(e); }
+}
+
+function editExistingEntry(entryId, clockIn, clockOut) {
+  // Pre-fill the form with existing times for editing
+  const date = new Date(clockIn);
+  document.getElementById('ae-date').value = date.toISOString().slice(0,10);
+  document.getElementById('ae-clock-in').value = fmtTime(clockIn);
+  if (clockOut) document.getElementById('ae-clock-out').value = fmtTime(clockOut);
+  calcAEHours();
+  // Store entry ID for updating
+  document.getElementById('ae-error').dataset.editId = entryId;
+  document.getElementById('ae-error').textContent = '';
+  document.getElementById('ae-error').className = 'error-msg success-msg';
+  document.getElementById('ae-error').textContent = '✓ Editing existing entry — save to update';
+  setTimeout(() => {
+    document.getElementById('ae-error').textContent = '';
+    document.getElementById('ae-error').className = 'error-msg';
+  }, 3000);
+}
+
+function calcAEHours() {
+  const dateVal = document.getElementById('ae-date').value;
+  const inVal = document.getElementById('ae-clock-in').value;
+  const outVal = document.getElementById('ae-clock-out').value;
+  const bsVal = document.getElementById('ae-break-start').value;
+  const beVal = document.getElementById('ae-break-end').value;
+  const calc = document.getElementById('ae-calc-hours');
+  if (!dateVal || !inVal || !outVal) { calc.textContent = '—'; return; }
+  const base = new Date(dateVal);
+  function toTs(timeStr) {
+    const [h,m] = timeStr.split(':').map(Number);
+    const d = new Date(base); d.setHours(h,m,0,0); return d.getTime();
+  }
+  const inTs = toTs(inVal), outTs = toTs(outVal);
+  if (outTs <= inTs) { calc.textContent = '⚠️ Invalid'; return; }
+  let ms = outTs - inTs;
+  if (bsVal && beVal) { const bms = toTs(beVal) - toTs(bsVal); if (bms > 0) ms -= bms; }
+  calc.textContent = fmtDuration(ms);
+}
+
+async function saveAddEntry() {
+  const sel = document.getElementById('ae-staff-select');
+  const staffId = sel.value;
+  const staffName = sel.options[sel.selectedIndex]?.dataset?.name || '';
+  const dateVal = document.getElementById('ae-date').value;
+  const inVal = document.getElementById('ae-clock-in').value;
+  const outVal = document.getElementById('ae-clock-out').value;
+  const bsVal = document.getElementById('ae-break-start').value;
+  const beVal = document.getElementById('ae-break-end').value;
+  const err = document.getElementById('ae-error');
+  const editId = err.dataset.editId;
+  err.textContent = ''; err.className = 'error-msg';
+
+  if (!staffId) { err.textContent = 'Please select a staff member.'; return; }
+  if (!dateVal) { err.textContent = 'Please select a date.'; return; }
+  if (!inVal) { err.textContent = 'Please enter a clock-in time.'; return; }
+  if (!outVal) { err.textContent = 'Please enter a clock-out time.'; return; }
+
+  const base = new Date(dateVal);
+  function toTs(timeStr) {
+    const [h,m] = timeStr.split(':').map(Number);
+    const d = new Date(base); d.setHours(h,m,0,0); return d.getTime();
+  }
+  const inTs = toTs(inVal), outTs = toTs(outVal);
+  if (outTs <= inTs) { err.textContent = 'Clock-out must be after clock-in.'; return; }
+
+  const hasBreak = bsVal && beVal;
+  const bsTs = hasBreak ? toTs(bsVal) : null;
+  const beTs = hasBreak ? toTs(beVal) : null;
+
+  showLoading('Saving entry…');
+  try {
+    if (editId) {
+      // Update existing entry
+      await db.updateEntry(editId, {clock_in: inTs, clock_out: outTs});
+      if (hasBreak) await db.addBreak({id:'b'+Date.now(), staff_id:staffId, staff_name:staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
+    } else {
+      // Add new entry
+      await db.addEntry({id:'e'+Date.now(), staff_id:staffId, staff_name:staffName, clock_in:inTs, clock_out:outTs, personal_break:hasBreak, break_start:bsTs, break_end:beTs});
+      if (hasBreak) await db.addBreak({id:'b'+Date.now(), staff_id:staffId, staff_name:staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
+    }
+    hideLoading();
+    closeAddEntryModal();
+    renderWeekReport(reportWeekOffset);
+    err.dataset.editId = '';
+  } catch(e) {
+    hideLoading();
+    err.textContent = 'Error saving: ' + (e.message||'unknown');
+  }
+}
+
+function closeAddEntryModal() {
+  document.getElementById('add-entry-modal').style.display = 'none';
+  document.getElementById('ae-error').dataset.editId = '';
+}
+
 // ===================== INIT =====================
 window.addEventListener('DOMContentLoaded', async () => {
   // Init all screens hidden except login
@@ -1612,5 +1937,61 @@ window.addEventListener('DOMContentLoaded', async () => {
     <button class="btn btn-gray" onclick="closeEditModal()" style="margin-top:8px;">Cancel</button>
   </div>
 </div>
+
+<!-- ADD/EDIT ENTRY MODAL -->
+<div class="overlay" id="add-entry-modal" style="display:none;">
+  <div class="overlay-card" style="max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-bottom:4px;">➕ Add / Edit Entry</div>
+    <div style="font-size:13px;color:#888;margin-bottom:16px;">Add a missed entry or correct an existing one</div>
+
+    <div class="field-label">Staff Member</div>
+    <select class="text-input" id="ae-staff-select" onchange="onAEStaffChange()">
+      <option value="">— Select staff member —</option>
+    </select>
+
+    <div class="field-label">Date</div>
+    <input class="text-input" id="ae-date" type="date">
+
+    <div id="ae-existing-section" style="display:none;">
+      <div class="divider"></div>
+      <div style="font-size:13px;font-weight:800;color:#555;margin-bottom:8px;">EXISTING ENTRIES THIS DAY</div>
+      <div id="ae-existing-list"></div>
+      <div class="divider"></div>
+    </div>
+
+    <div style="font-size:13px;font-weight:800;color:#555;margin:12px 0 8px;">ADD NEW ENTRY</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <div class="field-label">Clock In</div>
+        <input class="text-input" id="ae-clock-in" type="time">
+      </div>
+      <div>
+        <div class="field-label">Clock Out</div>
+        <input class="text-input" id="ae-clock-out" type="time">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div>
+        <div class="field-label">Break Start (optional)</div>
+        <input class="text-input" id="ae-break-start" type="time">
+      </div>
+      <div>
+        <div class="field-label">Break End (optional)</div>
+        <input class="text-input" id="ae-break-end" type="time">
+      </div>
+    </div>
+
+    <div style="background:#f8f9fa;border-radius:12px;padding:12px;margin-top:12px;">
+      <div style="font-size:12px;font-weight:800;color:#888;margin-bottom:4px;">HOURS WORKED</div>
+      <div style="font-size:22px;font-weight:800;color:#333;" id="ae-calc-hours">—</div>
+    </div>
+
+    <div class="error-msg" id="ae-error"></div>
+    <button class="btn btn-gold" onclick="saveAddEntry()" style="margin-top:12px;">💾 Save Entry</button>
+    <button class="btn btn-gray" onclick="closeAddEntryModal()" style="margin-top:8px;">Cancel</button>
+  </div>
+</div>
+
 </body>
 </html>

@@ -893,29 +893,50 @@ async function refreshStaffActions() {
   const badge = document.getElementById('staff-status-badge');
   const actions = document.getElementById('staff-actions');
   try {
-    const entries = await db.getEntries('&staff_id=eq.' + currentUser.id);
-    const today = entries.filter(e => isSameDay(e.clock_in, nowMs()));
-    const last = today.length > 0 ? today[0] : null;
+    const [entries, breaks] = await Promise.all([
+      db.getEntries('&staff_id=eq.' + currentUser.id),
+      db.getBreaks('&staff_id=eq.' + currentUser.id)
+    ]);
+    const today = (entries||[]).filter(e => e && e.clock_in && isSameDay(e.clock_in, nowMs()));
+    const sorted = today.sort((a,b) => b.clock_in - a.clock_in);
+    const last = sorted.length > 0 ? sorted[0] : null;
     const isClockedIn = last && !last.clock_out;
-
-    const breaks = await db.getBreaks('&staff_id=eq.' + currentUser.id);
-    const todayBreaks = breaks.filter(b => isSameDay(b.break_start, nowMs()));
+    const todayBreaks = (breaks||[]).filter(b => b && b.break_start && isSameDay(b.break_start, nowMs()));
     const openBreak = todayBreaks.find(b => !b.break_end);
 
-    if (openBreak) {
+    // Auto-fix: if there's a newer clock-in entry after the break started,
+    // they already clocked back in — close the break record automatically
+    if (openBreak && isClockedIn && last.clock_in > openBreak.break_start) {
+      try { await db.updateBreak(openBreak.id, {break_end: last.clock_in}); } catch(e) {}
+      // Now they're clocked in, not on break
+      if (badge) badge.innerHTML = '<span class="status-badge status-in">● Clocked In</span>';
+      if (actions) actions.innerHTML = '<div class="action-row"><button class="btn btn-red" onclick="doClockOut()">🏠 Clock Out</button><button class="btn btn-outline" onclick="showBreakOptions(\'' + last.id + '\')">☕ Break</button></div>';
+      return;
+    }
+
+    // Also fix: open break with no active clock-in entry = orphaned break, show clock back in
+    if (openBreak && !isClockedIn) {
+      if (badge) badge.innerHTML = '<span class="status-badge status-break">⏸ On Break</span>';
       const elapsed = fmtDuration(nowMs() - openBreak.break_start);
-      badge.innerHTML = '<span class="status-badge status-break">On Break</span>';
-      actions.innerHTML = '<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">On break since ' + fmtTime(openBreak.break_start) + ' (' + elapsed + ')</div><button class="btn btn-green" onclick="doClockBackIn(\'' + openBreak.id + '\')">Clock Back In</button>';
+      if (actions) actions.innerHTML = '<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">On break since ' + fmtTime(openBreak.break_start) + ' (' + elapsed + ')</div><button class="btn btn-green" onclick="doClockBackIn(\'' + openBreak.id + '\')">▶ Clock Back In</button>';
+      return;
+    }
+
+    if (openBreak && isClockedIn) {
+      // On break (last entry is before break start)
+      if (badge) badge.innerHTML = '<span class="status-badge status-break">⏸ On Break</span>';
+      const elapsed = fmtDuration(nowMs() - openBreak.break_start);
+      if (actions) actions.innerHTML = '<div style="text-align:center;color:#856404;font-size:13px;font-weight:700;margin-bottom:6px;">On break since ' + fmtTime(openBreak.break_start) + ' (' + elapsed + ')</div><button class="btn btn-green" onclick="doClockBackIn(\'' + openBreak.id + '\')">▶ Clock Back In</button>';
     } else if (isClockedIn) {
-      badge.innerHTML = '<span class="status-badge status-in">Clocked In</span>';
-      actions.innerHTML = '<div class="action-row"><button class="btn btn-red" onclick="doClockOut()">Clock Out</button><button class="btn btn-outline" onclick="showBreakOptions(\'' + last.id + '\')">Personal Break</button></div>';
+      if (badge) badge.innerHTML = '<span class="status-badge status-in">● Clocked In</span>';
+      if (actions) actions.innerHTML = '<div class="action-row"><button class="btn btn-red" onclick="doClockOut()">🏠 Clock Out</button><button class="btn btn-outline" onclick="showBreakOptions(\'' + last.id + '\')">☕ Break</button></div>';
     } else {
-      badge.innerHTML = '<span class="status-badge status-out">Not Clocked In</span>';
-      actions.innerHTML = '<button class="btn btn-gold" onclick="doClockIn()">Clock In</button>';
+      if (badge) badge.innerHTML = '<span class="status-badge status-out">○ Not Clocked In</span>';
+      if (actions) actions.innerHTML = '<button class="btn btn-gold" onclick="doClockIn()">🐾 Clock In</button>';
     }
   } catch(e) {
     console.error('refreshStaffActions error:', e);
-    actions.innerHTML = '<div class="error-msg">Could not load status. Please refresh.</div>';
+    if (actions) actions.innerHTML = '<button class="btn btn-gold" onclick="doClockIn()">🐾 Clock In</button>';
   }
 }
 async function updateStaffStats() {
@@ -1095,15 +1116,20 @@ async function renderMgrStaff() {
   try {
     const staff = await db.getStaff();
     const entries = await db.getEntries('');
+    let allBreaks = []; try { allBreaks = await db.getBreaks(''); } catch(e) {}
     const now = nowMs();
     if (!staff.length) { el.innerHTML = '<div class="no-data">No staff registered yet.</div>'; return; }
     el.innerHTML = staff.map(s => {
       const today = entries.filter(e => e.staff_id === s.id && isSameDay(e.clock_in, now));
-      const last = today.sort((a,b) => b.clock_in - a.clock_in)[0];
+      const sortedToday = today.sort((a,b) => b.clock_in - a.clock_in);
+      const last = sortedToday[0];
       const isClockedIn = last && !last.clock_out;
-      const onBreak = last && last.personal_break && !last.break_end;
+      const staffBreaks = (allBreaks||[]).filter(b => b.staff_id === s.id && isSameDay(b.break_start, now));
+      const openBreak = staffBreaks.find(b => !b.break_end);
+      // Auto-detect: if newest entry is after break start, they already clocked back in
+      const actuallyOnBreak = openBreak && !(isClockedIn && last.clock_in > openBreak.break_start);
       let statusHtml = '<span class="status-badge status-out">Not In</span>';
-      if (onBreak) statusHtml = '<span class="status-badge status-break">On Break</span>';
+      if (actuallyOnBreak) statusHtml = '<span class="status-badge status-break">On Break</span>';
       else if (isClockedIn) statusHtml = '<span class="status-badge status-in">Clocked In</span>';
       let todayMs = 0;
       today.forEach(e => { if(e.clock_out){todayMs += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) todayMs -= (e.break_end||e.clock_out) - e.break_start;} });

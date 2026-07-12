@@ -1133,10 +1133,16 @@ async function renderMgrStaff() {
       else if (isClockedIn) statusHtml = '<span class="status-badge status-in">Clocked In</span>';
       let todayMs = 0;
       today.forEach(e => { if(e.clock_out){todayMs += e.clock_out - e.clock_in; if(e.personal_break&&e.break_start) todayMs -= (e.break_end||e.clock_out) - e.break_start;} });
+      // Subtitle should reflect actual status
+      let subtitle = 'Not clocked in';
+      if (actuallyOnBreak) subtitle = 'On break since ' + fmtTime(openBreak.break_start);
+      else if (isClockedIn) subtitle = 'Clocked in at ' + fmtTime(last.clock_in) + (todayMs > 0 ? ' • ' + fmtDuration(todayMs) + ' so far' : '');
+      else if (todayMs > 0) subtitle = fmtDuration(todayMs) + ' worked today';
+
       return `<div class="shift-stat">
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="width:34px;height:34px;flex-shrink:0;">${DOG_AVATARS[s.avatar||0].svg}</div>
-          <div><div class="fw700" style="font-size:14px;">${s.name}</div><div class="text-sm">${todayMs>0?fmtDuration(todayMs)+' today':'Not clocked in'}</div></div>
+          <div><div class="fw700" style="font-size:14px;">${s.name}</div><div class="text-sm">${subtitle}</div></div>
         </div>${statusHtml}</div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div class="error-msg">Could not load staff.</div>'; }
@@ -1653,8 +1659,9 @@ async function startTimedBreak(entryId, minutes) {
   try {
     const now = nowMs();
     const breakId = 'b' + now;
+    // Close the current entry and start break
+    await db.updateEntry(entryId, {personal_break: true, clock_out: now});
     await db.addBreak({id: breakId, staff_id: currentUser.id, staff_name: currentUser.name, break_date: now, break_start: now, break_end: null});
-    await db.updateEntry(entryId, {personal_break: true});
     hideLoading();
     showBreakCountdown(breakId, minutes, now);
   } catch(e) { hideLoading(); alert('Error starting break: ' + e.message); }
@@ -1696,7 +1703,9 @@ async function endBreakAuto(breakId) {
   try {
     const now = nowMs();
     await db.updateBreak(breakId, {break_end: now});
-    await db.addEntry({id:'e'+now, staff_id:currentUser.id, staff_name:currentUser.name, clock_in:now, clock_out:null, personal_break:false, break_start:null, break_end:null});
+    // Use a slightly different timestamp for the new entry to avoid ID collision
+    const newEntryId = 'e' + (now + 1);
+    await db.addEntry({id: newEntryId, staff_id: currentUser.id, staff_name: currentUser.name, clock_in: now + 1, clock_out: null, personal_break: false, break_start: null, break_end: null});
     speak('Break over ' + currentUser.name + '! Time to get back to work!');
     await refreshStaffActions();
     await updateStaffStats();
@@ -1709,7 +1718,8 @@ async function endBreakEarly(breakId) {
   try {
     const now = nowMs();
     await db.updateBreak(breakId, {break_end: now});
-    await db.addEntry({id:'e'+now, staff_id:currentUser.id, staff_name:currentUser.name, clock_in:now, clock_out:null, personal_break:false, break_start:null, break_end:null});
+    const newEntryId = 'e' + (now + 1);
+    await db.addEntry({id: newEntryId, staff_id: currentUser.id, staff_name: currentUser.name, clock_in: now + 1, clock_out: null, personal_break: false, break_start: null, break_end: null});
     hideLoading();
     await refreshStaffActions();
     await updateStaffStats();
@@ -1717,12 +1727,12 @@ async function endBreakEarly(breakId) {
 }
 
 async function startCustomBreak(entryId) {
-  // Custom break = manual clock back in (existing doClockBackIn flow)
   showLoading('Starting break…');
   try {
     const now = nowMs();
+    // Close current entry and record break
+    await db.updateEntry(entryId, {personal_break: true, clock_out: now});
     await db.addBreak({id:'b'+now, staff_id:currentUser.id, staff_name:currentUser.name, break_date:now, break_start:now, break_end:null});
-    await db.updateEntry(entryId, {personal_break:true});
     hideLoading();
     await refreshStaffActions();
   } catch(e) { hideLoading(); alert('Error starting break: ' + e.message); }
@@ -1870,12 +1880,12 @@ async function saveAddEntry() {
   try {
     if (editId) {
       // Update existing entry
-      await db.updateEntry(editId, {clock_in: inTs, clock_out: outTs});
+      await db.updateEntry(editId, {clock_in: inTs, clock_out: outTs, personal_break: hasBreak ? true : false});
       if (hasBreak) await db.addBreak({id:'b'+Date.now(), staff_id:staffId, staff_name:staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
     } else {
-      // Add new entry
-      await db.addEntry({id:'e'+Date.now(), staff_id:staffId, staff_name:staffName, clock_in:inTs, clock_out:outTs, personal_break:hasBreak, break_start:bsTs, break_end:beTs});
-      if (hasBreak) await db.addBreak({id:'b'+Date.now(), staff_id:staffId, staff_name:staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
+      // Add new entry - ensure personal_break is a proper boolean
+      await db.addEntry({id:'e'+Date.now(), staff_id:staffId, staff_name:staffName, clock_in:inTs, clock_out:outTs, personal_break: hasBreak ? true : false, break_start: bsTs || null, break_end: beTs || null});
+      if (hasBreak) await db.addBreak({id:'b'+(Date.now()+1), staff_id:staffId, staff_name:staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
     }
     hideLoading();
     closeAddEntryModal();

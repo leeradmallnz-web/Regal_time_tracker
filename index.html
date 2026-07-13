@@ -1833,7 +1833,8 @@ function calcAEHours() {
   const bsVal = document.getElementById('ae-break-start').value;
   const beVal = document.getElementById('ae-break-end').value;
   const calc = document.getElementById('ae-calc-hours');
-  if (!dateVal || !inVal || !outVal) { calc.textContent = '—'; return; }
+  if (!dateVal || !inVal) { calc.textContent = '—'; return; }
+  if (!outVal) { calc.textContent = 'Shift in progress…'; return; }
   const base = new Date(dateVal);
   function toTs(timeStr) {
     const [h,m] = timeStr.split(':').map(Number);
@@ -1862,15 +1863,15 @@ async function saveAddEntry() {
   if (!staffId) { err.textContent = 'Please select a staff member.'; return; }
   if (!dateVal) { err.textContent = 'Please select a date.'; return; }
   if (!inVal) { err.textContent = 'Please enter a clock-in time.'; return; }
-  if (!outVal) { err.textContent = 'Please enter a clock-out time.'; return; }
 
   const base = new Date(dateVal);
   function toTs(timeStr) {
     const [h,m] = timeStr.split(':').map(Number);
     const d = new Date(base); d.setHours(h,m,0,0); return d.getTime();
   }
-  const inTs = toTs(inVal), outTs = toTs(outVal);
-  if (outTs <= inTs) { err.textContent = 'Clock-out must be after clock-in.'; return; }
+  const inTs = toTs(inVal);
+  const outTs = outVal ? toTs(outVal) : null;
+  if (outTs && outTs <= inTs) { err.textContent = 'Clock-out must be after clock-in.'; return; }
 
   const hasBreak = bsVal && beVal;
   const bsTs = hasBreak ? toTs(bsVal) : null;
@@ -1880,11 +1881,11 @@ async function saveAddEntry() {
   try {
     if (editId) {
       // Update existing entry
-      await db.updateEntry(editId, {clock_in: inTs, clock_out: outTs, personal_break: hasBreak ? true : false});
+      await db.updateEntry(editId, {clock_in: inTs, clock_out: outTs||null, personal_break: hasBreak ? true : false});
       if (hasBreak) await db.addBreak({id:'b'+Date.now(), staff_id:staffId, staff_name:staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
     } else {
       // Add new entry - ensure personal_break is a proper boolean
-      await db.addEntry({id:'e'+Date.now(), staff_id:staffId, staff_name:staffName, clock_in:inTs, clock_out:outTs, personal_break: hasBreak ? true : false, break_start: bsTs || null, break_end: beTs || null});
+      await db.addEntry({id:'e'+Date.now(), staff_id:staffId, staff_name:staffName, clock_in:inTs, clock_out:outTs||null, personal_break: hasBreak ? true : false, break_start: bsTs || null, break_end: beTs || null});
       if (hasBreak) await db.addBreak({id:'b'+(Date.now()+1), staff_id:staffId, staff_name:staffName, break_date:inTs, break_start:bsTs, break_end:beTs});
     }
     hideLoading();

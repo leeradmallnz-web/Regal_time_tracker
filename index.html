@@ -1027,7 +1027,19 @@ async function doClockBackIn(breakId) {
   try {
     const now = nowMs();
     // Close the break record
-    await db.updateBreak(breakId, {break_end:now});
+    await db.updateBreak(breakId, {break_end: now});
+    // Create a new clock-in entry so they are active again
+    const newEntryId = 'e' + (now + 2);
+    await db.addEntry({
+      id: newEntryId,
+      staff_id: currentUser.id,
+      staff_name: currentUser.name,
+      clock_in: now + 2,
+      clock_out: null,
+      personal_break: false,
+      break_start: null,
+      break_end: null
+    });
     hideLoading();
     await refreshStaffActions();
     await updateStaffStats();
@@ -1690,6 +1702,7 @@ function showBreakCountdown(breakId, minutes, startTime) {
 
     if (remaining <= 0) {
       clearInterval(breakCountdownInterval);
+      breakCountdownInterval = null;
       endBreakAuto(breakId);
     }
   }
@@ -1700,31 +1713,67 @@ function showBreakCountdown(breakId, minutes, startTime) {
 }
 
 async function endBreakAuto(breakId) {
+  // Don't fire if early end already ran
+  if (endBreakEarly._running || breakCountdownInterval === null) return;
+  clearInterval(breakCountdownInterval);
+  breakCountdownInterval = null;
   try {
     const now = nowMs();
     await db.updateBreak(breakId, {break_end: now});
-    // Use a slightly different timestamp for the new entry to avoid ID collision
-    const newEntryId = 'e' + (now + 1);
-    await db.addEntry({id: newEntryId, staff_id: currentUser.id, staff_name: currentUser.name, clock_in: now + 1, clock_out: null, personal_break: false, break_start: null, break_end: null});
+    const newEntryId = 'e' + (now + 2);
+    await db.addEntry({
+      id: newEntryId,
+      staff_id: currentUser.id,
+      staff_name: currentUser.name,
+      clock_in: now + 2,
+      clock_out: null,
+      personal_break: false,
+      break_start: null,
+      break_end: null
+    });
     speak('Break over ' + currentUser.name + '! Time to get back to work!');
     await refreshStaffActions();
     await updateStaffStats();
+    await renderRecentShifts();
   } catch(e) { console.error('Auto end break error:', e); }
 }
 
 async function endBreakEarly(breakId) {
+  // Prevent double-firing if auto-end and early-end race
+  if (endBreakEarly._running) return;
+  endBreakEarly._running = true;
   clearInterval(breakCountdownInterval);
+  breakCountdownInterval = null;
   showLoading('Clocking back in…');
   try {
     const now = nowMs();
+    // Close the break record
     await db.updateBreak(breakId, {break_end: now});
-    const newEntryId = 'e' + (now + 1);
-    await db.addEntry({id: newEntryId, staff_id: currentUser.id, staff_name: currentUser.name, clock_in: now + 1, clock_out: null, personal_break: false, break_start: null, break_end: null});
+    // Create new clock-in entry with unique timestamp
+    const newEntryId = 'e' + (now + 2);
+    await db.addEntry({
+      id: newEntryId,
+      staff_id: currentUser.id,
+      staff_name: currentUser.name,
+      clock_in: now + 2,
+      clock_out: null,
+      personal_break: false,
+      break_start: null,
+      break_end: null
+    });
     hideLoading();
+    endBreakEarly._running = false;
     await refreshStaffActions();
     await updateStaffStats();
-  } catch(e) { hideLoading(); alert('Error: ' + e.message); }
+    await renderRecentShifts();
+  } catch(e) {
+    hideLoading();
+    endBreakEarly._running = false;
+    console.error('endBreakEarly error:', e);
+    alert('Error clocking back in: ' + (e.message||'unknown'));
+  }
 }
+endBreakEarly._running = false;
 
 async function startCustomBreak(entryId) {
   showLoading('Starting break…');

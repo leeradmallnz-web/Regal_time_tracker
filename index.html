@@ -95,8 +95,10 @@ select.text-input{cursor:pointer;}
 
 /* TABLE */
 .staff-table{width:100%;border-collapse:collapse;font-size:12px;}
-.staff-table th{background:#f5f5f5;padding:8px 8px;text-align:left;font-weight:800;color:#555;border-bottom:2px solid #e0e0e0;}
-.staff-table td{padding:7px 8px;border-bottom:1px solid #f0f0f0;color:#333;vertical-align:middle;}
+.staff-table th{background:#f5f5f5;padding:6px 3px;text-align:center;font-weight:800;color:#555;border-bottom:2px solid #e0e0e0;font-size:11px;}
+.staff-table th:first-child{text-align:left;padding-left:6px;}
+.staff-table td{padding:6px 3px;border-bottom:1px solid #f0f0f0;color:#333;vertical-align:middle;}
+.staff-table td:first-child{padding-left:6px;}
 
 /* MISC */
 .section-title{font-family:var(--font-display);font-size:20px;font-weight:700;color:#222;margin-bottom:10px;}
@@ -1170,12 +1172,12 @@ async function renderWeekReport(offset) {
     const entries = await db.getEntries('&clock_in=gte.' + start.getTime() + '&clock_in=lte.' + end.getTime());
     if (!staff.length) { area.innerHTML = '<div class="no-data">No staff to show.</div>'; return; }
     const days = ['Mon','Tue','Wed','Thu','Fri'];
-    let html = '<table class="staff-table" style="min-width:420px;"><thead><tr><th>Name</th>' + days.map(d=>'<th>'+d+'</th>').join('') + '<th>Total</th></tr></thead><tbody>';
+    let html = '<table class="staff-table" style="width:100%;table-layout:fixed;"><thead><tr><th style="width:28%">Name</th>' + days.map(d=>'<th style="width:12%;text-align:center;">'+d+'</th>').join('') + '<th style="width:12%;text-align:center;">Total</th></tr></thead><tbody>';
     let allBreaksR = [];
     try { allBreaksR = await db.getBreaks(''); } catch(be) { console.warn('Breaks load failed:', be); }
     const rangeBreaks = allBreaksR.filter(b => b.break_start >= start.getTime() && b.break_start <= end.getTime());
     staff.forEach(s => {
-      html += '<tr><td style="font-weight:800;white-space:nowrap;">' + s.name + '</td>';
+      html += '<tr><td style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">' + s.name + '</td>';
       let totalMs = 0;
       for (let i = 0; i < 5; i++) {
         const day = new Date(start); day.setDate(start.getDate() + i);
@@ -1197,9 +1199,9 @@ async function renderWeekReport(offset) {
         const firstBreakId = dayBreaks.length ? dayBreaks[0].id : null;
         const cellClick = firstEId ? `onclick="openEditModal('${s.id}','${s.name}',${day.getTime()},${dayEnd.getTime()})" style="cursor:pointer;" title="Click to edit"` : '';
         const editIcon = firstEId ? ' <span style="color:var(--gold);font-size:10px;">✏️</span>' : '';
-        html += '<td style="font-size:11px;white-space:nowrap;" '+cellClick+'>' + (ms>0 ? fmtDuration(ms) : (firstEId ? '—' : '—')) + editIcon + '</td>';
+        html += '<td style="font-size:11px;text-align:center;padding:4px 2px;" '+cellClick+'>' + (ms>0 ? fmtDuration(ms) : (firstEId ? '—' : '—')) + editIcon + '</td>';
       }
-      html += '<td style="font-weight:800;white-space:nowrap;">' + (totalMs>0 ? fmtDuration(totalMs) : '—') + '</td></tr>';
+      html += '<td style="font-weight:800;font-size:11px;text-align:center;padding:6px 2px;">' + (totalMs>0 ? fmtDuration(totalMs) : '—') + '</td></tr>';
     });
     html += '</tbody></table>';
     area.innerHTML = html;

@@ -1819,7 +1819,12 @@ async function openAddEntryModal() {
   ['ae-clock-in','ae-clock-out','ae-break-start','ae-break-end'].forEach(id => {
     document.getElementById(id).oninput = calcAEHours;
   });
-  document.getElementById('ae-date').onchange = onAEStaffChange;
+  document.getElementById('ae-date').onchange = () => {
+    document.getElementById('ae-clock-in').value = '';
+    document.getElementById('ae-clock-out').value = '';
+    document.getElementById('ae-error').dataset.editId = '';
+    onAEStaffChange();
+  };
 
   document.getElementById('add-entry-modal').style.display = 'flex';
 }
@@ -1860,19 +1865,32 @@ async function onAEStaffChange() {
 function editExistingEntry(entryId, clockIn, clockOut) {
   // Pre-fill the form with existing times for editing
   const date = new Date(clockIn);
-  document.getElementById('ae-date').value = date.toISOString().slice(0,10);
+  // Use local date to avoid timezone issues
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  document.getElementById('ae-date').value = y + '-' + m + '-' + d;
   document.getElementById('ae-clock-in').value = fmtTime(clockIn);
-  if (clockOut) document.getElementById('ae-clock-out').value = fmtTime(clockOut);
+  // Only fill clock-out if it exists and is not zero
+  const clockOutEl = document.getElementById('ae-clock-out');
+  if (clockOut && clockOut > 0) {
+    clockOutEl.value = fmtTime(clockOut);
+  } else {
+    clockOutEl.value = '';
+  }
+  document.getElementById('ae-break-start').value = '';
+  document.getElementById('ae-break-end').value = '';
   calcAEHours();
   // Store entry ID for updating
   document.getElementById('ae-error').dataset.editId = entryId;
   document.getElementById('ae-error').textContent = '';
   document.getElementById('ae-error').className = 'error-msg success-msg';
-  document.getElementById('ae-error').textContent = '✓ Editing existing entry — save to update';
+  const activeMsg = (!clockOut || clockOut === 0) ? '✓ Editing active shift — clock-out optional' : '✓ Editing existing entry — save to update';
+  document.getElementById('ae-error').textContent = activeMsg;
   setTimeout(() => {
     document.getElementById('ae-error').textContent = '';
     document.getElementById('ae-error').className = 'error-msg';
-  }, 3000);
+  }, 4000);
 }
 
 function calcAEHours() {
